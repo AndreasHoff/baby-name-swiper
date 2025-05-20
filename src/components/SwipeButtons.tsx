@@ -2,30 +2,29 @@ import React from 'react';
 import { useNameStore } from '../store';
 
 export const SwipeButtons: React.FC = () => {
-  // Only select the array and vote function from Zustand, do not filter in the selector!
   const names = useNameStore((s) => s.names);
   const vote = useNameStore((s) => s.vote);
   const unvoted = names.filter((n) => n.voteStatus === null);
   if (unvoted.length === 0) return null;
   const top = unvoted[0];
   return (
-    <div className="flex justify-center gap-4 mt-4">
+    <div className="cardstack-buttons flex flex-row items-center justify-center w-[430px] max-w-full px-4 md:px-8 gap-4 mt-4 mx-auto" style={{flex: '0 0 auto'}}>
       <button
-        className="bg-red-200 hover:bg-red-400 text-red-900 font-bold py-2 px-4 rounded-full text-xl"
+        className="flex-1 bg-gradient-to-br from-fuchsia-400 to-sky-400 hover:from-fuchsia-500 hover:to-sky-500 text-white font-bold py-3 px-0 rounded-full text-2xl shadow-lg transition-all duration-200"
         onClick={() => vote(top.id, 'no')}
         aria-label="No"
       >
         ❌
       </button>
       <button
-        className="bg-gray-200 hover:bg-gray-400 text-gray-900 font-bold py-2 px-4 rounded-full text-xl"
+        className="flex-1 bg-gradient-to-br from-amber-400 to-fuchsia-400 hover:from-amber-500 hover:to-fuchsia-500 text-white font-bold py-3 px-0 rounded-full text-2xl shadow-lg transition-all duration-200"
         onClick={() => vote(top.id, 'absolutely-not')}
         aria-label="Absolutely Not"
       >
         🚫
       </button>
       <button
-        className="bg-green-200 hover:bg-green-400 text-green-900 font-bold py-2 px-4 rounded-full text-xl"
+        className="flex-1 bg-gradient-to-br from-sky-400 to-amber-400 hover:from-sky-500 hover:to-amber-500 text-white font-bold py-3 px-0 rounded-full text-2xl shadow-lg transition-all duration-200"
         onClick={() => vote(top.id, 'yes')}
         aria-label="Yes"
       >

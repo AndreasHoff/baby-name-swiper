@@ -1,54 +1,41 @@
-# React + TypeScript + Vite
+# Baby Name Swiper App 👶❤️
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## ✨ Description
+A playful, mobile-friendly app for swiping through baby names and sorting them into categories: "Yes", "No", and "Absolutely Not". Built for expecting parents to have fun picking names together.
 
-Currently, two official plugins are available:
+## 🧠 Core Features
+- **Swipable name cards** (boy/girl/unisex) in the center of the screen. Swipe functionality is implemented using Framer Motion for smooth drag gestures and touch support on mobile.
+- Three colorful buttons below each card:
+  - Left: ❌ "No"
+  - Middle: 🚫 "Absolutely Not"
+  - Right: ✅ "Yes"
+- Add custom names manually with gender selection.
+- Automatically shuffle and show only *unvoted* cards on app load.
+- View all names categorized by vote status in a list view.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🌍 Name Data
+Uses a mock dataset of Danish/Scandinavian names. You can swap in your own JSON or connect to an API.
 
-## Expanding the ESLint configuration
+## 🧰 Tech Stack
+- **React** with **Vite**
+- **Tailwind CSS** for styling (via CDN)
+- **Zustand** for local state management
+- **Framer Motion** for swipe/touch animations
+- **Firebase** (optional, for database/auth)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🧩 Architecture
+- `CardStack`: Swipable stack of names (drag to vote)
+- `SwipeButtons`: Vote buttons
+- `NameForm`: Form to add custom names
+- `NameListView`: Shows categorized names
+- Zustand store for UI & vote state
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+## 🚀 Getting Started
+1. Clone the repo
+2. Install dependencies: `npm install`
+3. Start dev server: `npm run dev`
+4. Open [http://localhost:5000](http://localhost:5000) in your browser
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+> **Note:** The app is fully responsive and optimized for mobile (max-width 430px). Swiping works with both touch and mouse. The swipe gesture is a true drag-to-vote experience: drag left for "No", right for "Yes".

@@ -1,3 +1,5 @@
+/* Remove all Tailwind/PostCSS directives since Tailwind is now loaded via CDN. Keep only any custom CSS if needed, or leave empty. */
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -64,5 +66,33 @@ button:focus-visible {
   }
   button {
     background-color: #f9f9f9;
+  }
+}
+
+@media screen and (max-width: 430px) {
+  body {
+    width: 100vw !important;
+    min-width: 0 !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box;
+  }
+  .cardstack-card {
+    width: 100vw !important;
+    max-width: 430px !important;
+    min-width: 0 !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    box-sizing: border-box;
+  }
+  .cardstack-buttons,
+  .cardstack-form,
+  .cardstack-list {
+    max-width: 100vw !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    box-sizing: border-box;
   }
 }

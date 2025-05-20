@@ -1,0 +1,12 @@
+[
+  { "name": "Freja", "gender": "girl" },
+  { "name": "Noah", "gender": "boy" },
+  { "name": "Asta", "gender": "girl" },
+  { "name": "Mikkel", "gender": "boy" },
+  { "name": "Saga", "gender": "girl" },
+  { "name": "Viggo", "gender": "boy" },
+  { "name": "Liv", "gender": "girl" },
+  { "name": "Storm", "gender": "unisex" },
+  { "name": "Sofie", "gender": "girl" },
+  { "name": "Emil", "gender": "boy" }
+]
