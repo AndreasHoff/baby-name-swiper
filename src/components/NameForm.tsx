@@ -34,15 +34,16 @@ const NameInput: React.FC<{
   />
 );
 
-export const NameForm: React.FC = () => {
+export const NameForm: React.FC<{ onNameAdded?: (name?: string) => void }> = ({ onNameAdded }) => {
   const [name, setName] = useState('');
   const [gender, setGender] = useState<Gender>('boy');
   const addName = useNameStore((s) => s.addName);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    addName(name.trim(), gender);
+    await addName(name.trim(), gender);
+    if (onNameAdded) onNameAdded(name.trim());
     setName('');
   };
 

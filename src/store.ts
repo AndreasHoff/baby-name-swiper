@@ -1,36 +1,24 @@
+import { addDoc, collection, getDocs } from 'firebase/firestore';
 import React from 'react';
 import { create } from 'zustand';
-// import { auth, onAuth, signInAnon } from './firebase';
+import { db } from './firebase';
 
 export type VoteStatus = 'yes' | 'no' | 'absolutely-not' | null;
 export type Gender = 'boy' | 'girl' | 'unisex';
-export interface NameCard {
-  id: number;
+export type NameCard = {
+  id: string;
   name: string;
   gender: Gender;
   voteStatus: VoteStatus;
-}
+};
 
 interface NameStore {
   names: NameCard[];
-  vote: (id: number, status: VoteStatus) => void;
+  vote: (id: string, status: VoteStatus) => void;
   addName: (name: string, gender: Gender) => void;
   resetVotes: () => void;
   setNames: (names: NameCard[]) => void;
 }
-
-// Helper to sync votes to Firestore
-// async function syncVotesToFirestore(uid: string, names: NameCard[]) {
-//   const liked = names.filter(n => n.voteStatus === 'yes').map(n => n.name);
-//   const disliked = names.filter(n => n.voteStatus === 'no').map(n => n.name);
-//   const absolutelyNot = names.filter(n => n.voteStatus === 'absolutely-not').map(n => n.name);
-//   await setDoc(doc(db, 'users', uid), {
-//     liked,
-//     disliked,
-//     absolutelyNot,
-//     updated: new Date().toISOString(),
-    // }, { merge: true });
-// }
 
 // Zustand store without Firestore sync
 export const useNameStore = create<NameStore>((set /*, get */) => ({
@@ -41,13 +29,16 @@ export const useNameStore = create<NameStore>((set /*, get */) => ({
       return { names: updated };
     });
   },
-  addName: (name, gender) => set((state) => {
-    const updated = [
-      ...state.names,
-      { id: Date.now(), name, gender, voteStatus: null },
-    ];
-    return { names: updated };
-  }),
+  addName: async (name, gender) => {
+    // Add to Firestore
+    await addDoc(collection(db, 'baby-names'), {
+      name,
+      gender,
+      voteStatus: null,
+      created: new Date().toISOString(),
+    });
+    // Optionally, you can optimistically update local state or re-fetch
+  },
   resetVotes: () => set((state) => {
     const updated = state.names.map((n) => ({ ...n, voteStatus: null }));
     return { names: updated };
@@ -58,25 +49,23 @@ export const useNameStore = create<NameStore>((set /*, get */) => ({
 export const useFetchNames = () => {
   const setNames = useNameStore((s) => s.setNames);
   React.useEffect(() => {
-    fetch('/src/assets/largeNames.json')
-      .then(res => res.json())
-      .then(data => {
-        const names = (Array.isArray(data) ? data : []).map((n, i) => ({
-          id: i + 1,
-          name: n.name,
-          gender: n.gender || 'unisex',
-          voteStatus: null,
-        }));
-        // Shuffle names
-        for (let i = names.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [names[i], names[j]] = [names[j], names[i]];
-        }
-        setNames(names);
-      })
-      .catch(() => {
-        setNames([]);
-      });
+    // Fetch from Firestore instead of local JSON
+    getDocs(collection(db, 'baby-names')).then(snapshot => {
+      const names = snapshot.docs.map((doc) => ({
+        id: doc.id, // Use Firestore string id
+        name: doc.data().name,
+        gender: doc.data().gender || 'unisex',
+        voteStatus: doc.data().voteStatus ?? null,
+      }));
+      // Shuffle names
+      for (let i = names.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [names[i], names[j]] = [names[j], names[i]];
+      }
+      setNames(names as any); // Type assertion to satisfy NameCard[]
+    }).catch(() => {
+      setNames([]);
+    });
   }, [setNames]);
 };
 
