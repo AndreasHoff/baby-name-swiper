@@ -3,8 +3,8 @@ import { FaCog, FaRegIdBadge, FaRegListAlt } from "react-icons/fa";
 import { NameListView } from "./NameListView";
 
 interface NavBarProps {
-  currentView: "main" | "lists" | "settings";
-  setView: (view: "main" | "lists" | "settings") => void;
+  currentView: 'main' | 'lists' | 'settings';
+  setView: (view: 'main' | 'lists' | 'settings') => void;
 }
 
 const NavBar: React.FC<NavBarProps> = ({ currentView, setView }) => {

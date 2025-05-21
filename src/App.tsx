@@ -1,20 +1,51 @@
-import { useState } from 'react';
+import { doc } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
 import { CardStack } from './components/CardStack';
 import { NameForm } from './components/NameForm';
 import NavBar from './components/NavBar';
 import { SwipeButtons } from './components/SwipeButtons';
+import { db } from './firebase'; // Adjust the import based on your project structure
+
+function CenteredScreen({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center min-h-screen w-full bg-gradient-to-br from-fuchsia-100 via-amber-100 to-sky-100" style={{ width: '430px', maxWidth: '100vw' }}>
+      {children}
+    </div>
+  );
+}
 
 function App() {
+  // On mount, check for currentUser in localStorage and auto-login
+  useEffect(() => {
+    const storedUser = window.localStorage.getItem('currentUser');
+    if (storedUser === 'Andreas' || storedUser === 'Emilie') {
+      setCurrentUser(storedUser as 'Andreas' | 'Emilie');
+      setView('main');
+    }
+  }, []);
+
   const [view, setView] = useState<'main' | 'lists' | 'settings'>('main');
-  // Add state for swipe animation feedback
-  const [swipeDirection, setSwipeDirection] = useState<null | 'no' | 'absolutely-not' | 'yes'>(null);
-  // State for showing the add name success message
+  const [swipeDirection, setSwipeDirection] = useState<null | 'no' | 'favorite' | 'yes'>(null);
   const [showAddSuccess, setShowAddSuccess] = useState(false);
-  // State for the last added name
   const [lastAddedName, setLastAddedName] = useState<string | null>(null);
+  // User state: only two possible users
+  const [currentUser, setCurrentUser] = useState<'Andreas' | 'Emilie' | null>(null);
+
+  // Handler for welcome screen user selection
+  const handleUserSelect = async (user: 'Andreas' | 'Emilie') => {
+    window.localStorage.setItem('currentUser', user);
+    // Check if user exists in Firestore, if not, add
+    const userDocRef = doc(db, 'users', user);
+    const userDocSnap = await import('firebase/firestore').then(({ getDoc }) => getDoc(userDocRef));
+    if (!userDocSnap.exists()) {
+      await import('firebase/firestore').then(({ setDoc }) => setDoc(userDocRef, { displayName: user, created: new Date().toISOString() }));
+    }
+    setCurrentUser(user);
+    setView('main'); // Always go to main page after selecting user
+  };
 
   // Handler to pass to SwipeButtons
-  const handleSwipe = (direction: 'no' | 'absolutely-not' | 'yes') => {
+  const handleSwipe = (direction: 'no' | 'favorite' | 'yes') => {
     setSwipeDirection(direction);
   };
 
@@ -25,8 +56,28 @@ function App() {
     setTimeout(() => setShowAddSuccess(false), 2000);
   };
 
+  // For demo, the other user is the one not selected
+  const otherUserName = currentUser === 'Andreas' ? 'Emilie' : 'Andreas';
+
+  // Show welcome screen if no user selected
+  if (!currentUser) {
+    return (
+      <CenteredScreen>
+        <div className="bg-white/90 rounded-2xl shadow-xl px-8 py-8 flex flex-col items-center max-w-xs" style={{ marginTop: '5rem' }}>
+          <span className="text-5xl mb-2">👶</span>
+          <h1 className="text-2xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-fuchsia-400 to-amber-400 drop-shadow text-center">Welcome to Baby Name Swiper!</h1>
+          <p className="text-fuchsia-700 mb-4 text-center">Who are you?</p>
+          <div className="flex flex-row gap-4 w-full justify-center">
+            <button onClick={() => handleUserSelect('Andreas')} className="bg-gradient-to-br from-fuchsia-400 to-sky-400 hover:from-fuchsia-500 hover:to-sky-500 text-white px-4 py-2 rounded-lg font-bold shadow transition-all duration-200 w-1/2">Andreas</button>
+            <button onClick={() => handleUserSelect('Emilie')} className="bg-gradient-to-br from-amber-400 to-fuchsia-400 hover:from-amber-500 hover:to-fuchsia-500 text-white px-4 py-2 rounded-lg font-bold shadow transition-all duration-200 w-1/2">Emilie</button>
+          </div>
+        </div>
+      </CenteredScreen>
+    );
+  }
+
   return (
-    <div className="flex flex-col items-start justify-start min-h-screen w-full bg-gradient-to-br from-fuchsia-100 via-amber-100 to-sky-100" style={{boxSizing: 'border-box', minHeight: '100dvh'}}>
+    <div className="flex flex-col items-start justify-start min-h-screen w-full bg-gradient-to-br from-fuchsia-100 via-amber-100 to-sky-100" style={{ boxSizing: 'border-box', minHeight: '100dvh', width: '100vw' }}>
       <NavBar currentView={view} setView={setView} />
       {/* Toaster message for add name success - fixed at very top, theme-consistent, slide in/out from top */}
       <div className="fixed top-0 left-0 w-full flex justify-center z-50 pointer-events-none" style={{overflow: 'visible'}}>
@@ -49,26 +100,43 @@ function App() {
       <div className="mt-4 flex flex-col items-center justify-start w-[430px] max-w-full mx-auto overflow-hidden">
         {/* Only render the app headline on the main and settings views */}
         {(view === 'main' || view === 'settings') && (
-          <h1 className="text-4xl font-extrabold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-fuchsia-400 to-amber-400 drop-shadow-lg text-center flex items-center justify-center gap-2" style={{letterSpacing: '0.01em'}}>
-            <span role="img" aria-label="baby" className="text-5xl align-middle text-black bg-none" style={{color: '#222', background: 'none'}}>
-              👶
-            </span>
-            <span>Baby Name Swiper</span>
-          </h1>
+          <>
+            <h1 className="text-4xl font-extrabold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-fuchsia-400 to-amber-400 drop-shadow-lg text-center flex items-center justify-center gap-2" style={{letterSpacing: '0.01em'}}>
+              <span role="img" aria-label="baby" className="text-5xl align-middle text-black bg-none" style={{color: '#222', background: 'none'}}>
+                👶
+              </span>
+              <span>Baby Name Swiper</span>
+            </h1>
+            {/* Show logout button below headline on settings page */}
+            {view === 'settings' && (
+              <div className="w-full flex justify-center mb-6">
+                <button
+                  onClick={() => {
+                    setCurrentUser(null);
+                    window.localStorage.removeItem('currentUser');
+                  }}
+                  className="bg-gradient-to-br from-fuchsia-400 to-sky-400 hover:from-fuchsia-500 hover:to-sky-500 text-white px-6 py-2 rounded-lg font-bold shadow transition-all duration-200"
+                >
+                  Log out
+                </button>
+              </div>
+            )}
+          </>
         )}
         <div className="flex flex-col items-center w-full" style={{zIndex: 1}}>
           {view === 'main' && (
             <>
-              <CardStack swipeDirection={swipeDirection} onAnimationComplete={() => setSwipeDirection(null)} />
+              <CardStack swipeDirection={swipeDirection} onAnimationComplete={() => setSwipeDirection(null)} otherUserName={otherUserName} />
               <div className="flex flex-row items-center justify-center w-full mt-2 mb-2">
                 <SwipeButtons onSwipe={handleSwipe} />
               </div>
               <NameForm onNameAdded={handleNameAdded} />
+              {/* Add NameListView here */}
             </>
           )}
           {view === 'settings' && (
             <div className="w-full flex flex-col items-center justify-center py-8">
-              <p className="text-lg text-gray-600">Settings coming soon!</p>
+              {/* Logout button is now shown below the headline via NavBar, so nothing else needed here */}
             </div>
           )}
         </div>

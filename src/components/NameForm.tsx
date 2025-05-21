@@ -37,21 +37,53 @@ const NameInput: React.FC<{
 export const NameForm: React.FC<{ onNameAdded?: (name?: string) => void }> = ({ onNameAdded }) => {
   const [name, setName] = useState('');
   const [gender, setGender] = useState<Gender>('boy');
+  const [error, setError] = useState<string | null>(null);
   const addName = useNameStore((s) => s.addName);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     if (!name.trim()) return;
-    await addName(name.trim(), gender);
-    if (onNameAdded) onNameAdded(name.trim());
-    setName('');
+    try {
+      await addName(name.trim(), gender);
+      if (onNameAdded) onNameAdded(name.trim());
+      setName('');
+    } catch (err: any) {
+      if (err.message === 'DUPLICATE_NAME') {
+        setError('Baby name already exists');
+        setTimeout(() => setError(null), 2000);
+      } else {
+        setError('An error occurred');
+        setTimeout(() => setError(null), 2000);
+      }
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="cardstack-form flex flex-col items-center justify-center w-[430px] max-w-full px-4 md:px-8 gap-3 mt-3 mx-auto" style={{flex: '0 0 auto'}}>
-      <NameInput name={name} setName={setName} />
-      <GenderRadioGroup gender={gender} setGender={setGender} />
-      <button type="submit" className="bg-gradient-to-br from-fuchsia-400 to-sky-400 hover:from-fuchsia-500 hover:to-sky-500 text-white px-4 py-2 rounded-lg mt-2 font-bold shadow transition-all duration-200 w-full">Add Name</button>
-    </form>
+    <>
+      {/* Error toaster */}
+      <div className="fixed top-0 left-0 w-full flex justify-center z-50 pointer-events-none" style={{overflow: 'visible'}}>
+        <div
+          className="mt-3 px-8 py-3 rounded-2xl shadow-xl font-bold text-base flex items-center justify-center text-red-600 drop-shadow-lg text-center"
+          style={{
+            maxWidth: 420,
+            minWidth: 220,
+            background: 'linear-gradient(135deg, #fee2e2 0%, #fca5a5 60%, #fef3c7 100%)',
+            border: 'none',
+            boxShadow: '0 8px 24px 0 rgba(239, 68, 68, 0.10)',
+            transition: 'transform 0.5s cubic-bezier(0.4,0,0.2,1)',
+            transform: error ? 'translateY(0)' : 'translateY(-150%)',
+            opacity: 1
+          }}
+        >
+          <span className="mr-2 text-xl">❗</span><span className="mx-1 text-red-700">{error}</span>
+        </div>
+      </div>
+      <form onSubmit={handleSubmit} className="cardstack-form flex flex-col items-center justify-center w-[430px] max-w-full px-4 md:px-8 gap-3 mt-3 mx-auto" style={{flex: '0 0 auto'}}>
+        <NameInput name={name} setName={setName} />
+        <GenderRadioGroup gender={gender} setGender={setGender} />
+        <button type="submit" className="bg-gradient-to-br from-fuchsia-400 to-sky-400 hover:from-fuchsia-500 hover:to-sky-500 text-white px-4 py-2 rounded-lg mt-2 font-bold shadow transition-all duration-200 w-full">Add Name</button>
+      </form>
+    </>
   );
 };

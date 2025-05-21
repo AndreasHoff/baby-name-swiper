@@ -1,13 +1,13 @@
 # Baby Name Swiper App 👶❤️
 
 ## ✨ Description
-A playful, mobile-friendly app for swiping through baby names and sorting them into categories: "Yes", "No", and "Absolutely Not". Built for expecting parents to have fun picking names together.
+A playful, mobile-friendly app for swiping through baby names and sorting them into categories: "Yes", "No", and "Favorite". Built for expecting parents to have fun picking names together.
 
 ## 🧠 Core Features
 - **Swipable name cards** (boy/girl/unisex) in the center of the screen. Swipe functionality is implemented using Framer Motion for smooth drag gestures and touch support on mobile.
 - Three colorful buttons below each card:
   - Left: ❌ "No"
-  - Middle: 🚫 "Absolutely Not"
+  - Middle: ⭐ "Favorite"
   - Right: ✅ "Yes"
 - Add custom names manually with gender selection.
 - Automatically shuffle and show only *unvoted* cards on app load.
