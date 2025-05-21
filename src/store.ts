@@ -33,7 +33,7 @@ interface NameStore {
 // }
 
 // Zustand store without Firestore sync
-export const useNameStore = create<NameStore>((set, get) => ({
+export const useNameStore = create<NameStore>((set /*, get */) => ({
   names: [],
   vote: (id, status) => {
     set((state) => {
