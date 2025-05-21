@@ -6,7 +6,7 @@ export const NameListView: React.FC = () => {
   // Show all names, most recent on top
   const sorted = [...names].reverse();
   return (
-    <div className="w-full max-w-[430px] px-2 mt-2 mx-auto">
+    <div className="w-full max-w-[430px] pl-0 pr-2 mt-2 mx-auto">
       {/* App logo and name at the very top */}
       <div className="flex flex-row items-center justify-center gap-3 mt-2 mb-1">
         <span role="img" aria-label="baby" className="text-4xl align-middle">👶</span>
@@ -14,7 +14,7 @@ export const NameListView: React.FC = () => {
       </div>
       {/* Headline for the list */}
       <h2 className="text-base font-semibold text-amber-700 mb-4 text-center">Your Name Choices</h2>
-      <ul className="divide-y divide-gray-200 bg-white rounded-lg shadow">
+      <ul className="divide-y divide-gray-200 bg-white rounded-lg shadow overflow-x-auto scrollbar-thin scrollbar-thumb-fuchsia-200 scrollbar-track-transparent" style={{paddingRight: '1rem'}}>
         {sorted.map((n) => (
           <li key={n.id} className="flex flex-row items-center justify-between py-3 px-2">
             <span className={
