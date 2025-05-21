@@ -80,12 +80,13 @@ button:focus-visible {
     box-sizing: border-box;
   }
   .cardstack-card {
-    width: 100vw !important;
+    width: 85vw !important;
     max-width: 430px !important;
     min-width: 0 !important;
     padding-left: 0.5rem !important;
     padding-right: 0.5rem !important;
     box-sizing: border-box;
+    height: 25vh !important;
   }
   .cardstack-buttons,
   .cardstack-form,
