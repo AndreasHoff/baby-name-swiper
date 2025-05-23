@@ -59,143 +59,152 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
   }, [favoriteNames.length, totalPagesFavorites]);
 
   return (
-    <div className="w-full max-w-[430px] pl-0 pr-2 mt-2 mx-auto">
-      {/* DEBUG PANEL - REMOVE AFTER DEBUGGING */}
-      <div className="bg-yellow-50 border border-yellow-300 rounded p-2 mb-2 text-xs text-yellow-900">
-        <div><b>DEBUG:</b></div>
-        <div>allNames: {Array.isArray(allNames) ? allNames.length : 'N/A'}</div>
-        <div>freshNames: {Array.isArray(freshNames) ? freshNames.length : 'N/A'}</div>
-        <div>userVotes: {Object.keys(userVotes).length}</div>
-        <div>First 3 allNames: {Array.isArray(allNames) ? allNames.slice(0,3).map(n => n.name).join(', ') : 'N/A'}</div>
-        <div>First 3 freshNames: {Array.isArray(freshNames) ? freshNames.slice(0,3).map(n => n.name).join(', ') : 'N/A'}</div>
-        <div>First 3 userVotes keys: {Object.keys(userVotes).slice(0,3).join(', ')}</div>
-        <div>userVotes mapping for first 3 allNames ids:</div>
-        <pre style={{fontSize:'10px',overflow:'auto',maxHeight:'80px'}}>{JSON.stringify(allNames.slice(0,3).map(n => ({id: n.id, vote: userVotes[n.id]})), null, 2)}</pre>
-        <div>First 3 allNames objects:</div>
-        <pre style={{fontSize:'10px',overflow:'auto',maxHeight:'80px'}}>{JSON.stringify(allNames.slice(0,3), null, 2)}</pre>
-      </div>
-      {/* App logo and name at the very top */}
-      <div className="flex flex-row items-center justify-center gap-3 mt-2 mb-1">
-        <span role="img" aria-label="baby" className="text-4xl align-middle">👶</span>
-        <span className="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 via-fuchsia-400 to-amber-400 drop-shadow">Baby Name Swiper</span>
-      </div>
-      {/* Favorites */}
-      <h2 className="text-base font-semibold text-yellow-700 mb-2 text-center">Favorites ({favoriteNames.length})</h2>
-      <ul className="divide-y divide-gray-200 bg-white rounded-lg shadow overflow-x-auto mb-4">
-        {pagedFavoriteNames.length === 0 && <li className="py-3 px-2 text-center text-gray-400">No favorites yet.</li>}
-        {pagedFavoriteNames.map(n => {
-          const isMatch = ['yes', 'favorite'].includes(userVotes[String(n.id)]) && ['yes', 'favorite'].includes(otherUserVotes[String(n.id)]);
-          return (
-            <li key={n.id} className="relative flex items-center py-3 px-2 bg-yellow-50 min-h-[48px]">
-              <span className="absolute left-2 text-yellow-500 font-bold flex items-center gap-1">FAVORITE <span role='img' aria-label='star'>⭐</span></span>
+    <div>
+      {/* ULTRA DEBUG: Show first name and JSON at the very top, huge and colored */}
+      {freshNames.length > 0 && (
+        <div style={{color: 'red', fontSize: 24, background: 'yellow', padding: 8, marginBottom: 16}}>
+          <div>n.name: {freshNames[0].name ? freshNames[0].name : '[undefined]'}</div>
+          <div>n JSON: {JSON.stringify(freshNames[0])}</div>
+        </div>
+      )}
+      <div className="w-full max-w-[430px] pl-0 pr-2 mt-2 mx-auto">
+        {/* DEBUG PANEL - REMOVE AFTER DEBUGGING */}
+        <div className="bg-yellow-50 border border-yellow-300 rounded p-2 mb-2 text-xs text-yellow-900">
+          <div><b>DEBUG:</b></div>
+          <div>allNames: {Array.isArray(allNames) ? allNames.length : 'N/A'}</div>
+          <div>freshNames: {Array.isArray(freshNames) ? freshNames.length : 'N/A'}</div>
+          <div>userVotes: {Object.keys(userVotes).length}</div>
+          <div>First 3 allNames: {Array.isArray(allNames) ? allNames.slice(0,3).map(n => n.name).join(', ') : 'N/A'}</div>
+          <div>First 3 freshNames: {Array.isArray(freshNames) ? freshNames.slice(0,3).map(n => n.name).join(', ') : 'N/A'}</div>
+          <div>First 3 userVotes keys: {Object.keys(userVotes).slice(0,3).join(', ')}</div>
+          <div>userVotes mapping for first 3 allNames ids:</div>
+          <pre style={{fontSize:'10px',overflow:'auto',maxHeight:'80px'}}>{JSON.stringify(allNames.slice(0,3).map(n => ({id: n.id, vote: userVotes[n.id]})), null, 2)}</pre>
+          <div>First 3 allNames objects:</div>
+          <pre style={{fontSize:'10px',overflow:'auto',maxHeight:'80px'}}>{JSON.stringify(allNames.slice(0,3), null, 2)}</pre>
+        </div>
+        {/* App logo and name at the very top */}
+        <div className="flex flex-row items-center justify-center gap-3 mt-2 mb-1">
+          <span role="img" aria-label="baby" className="text-4xl align-middle">👶</span>
+          <span className="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 via-fuchsia-400 to-amber-400 drop-shadow">Baby Name Swiper</span>
+        </div>
+        {/* Favorites */}
+        <h2 className="text-base font-semibold text-yellow-700 mb-2 text-center">Favorites ({favoriteNames.length})</h2>
+        <ul className="divide-y divide-gray-200 bg-white rounded-lg shadow overflow-x-auto mb-4">
+          {pagedFavoriteNames.length === 0 && <li className="py-3 px-2 text-center text-gray-400">No favorites yet.</li>}
+          {pagedFavoriteNames.map(n => {
+            const isMatch = ['yes', 'favorite'].includes(userVotes[String(n.id)]) && ['yes', 'favorite'].includes(otherUserVotes[String(n.id)]);
+            return (
+              <li key={n.id} className="relative flex items-center py-3 px-2 bg-yellow-50 min-h-[48px]">
+                <span className="absolute left-2 text-yellow-500 font-bold flex items-center gap-1">FAVORITE <span role='img' aria-label='star'>⭐</span></span>
+                <span className="mx-auto font-semibold text-lg text-center w-full">
+                  {n.name}
+                  <pre style={{fontSize:'10px',whiteSpace:'pre-wrap',wordBreak:'break-all'}}>{JSON.stringify(n)}</pre>
+                </span>
+                <span className={n.gender === 'boy' ? 'absolute right-2 text-sky-600 flex items-center gap-2' : 'absolute right-2 text-fuchsia-600 flex items-center gap-2'}>
+                  {n.gender}
+                  {isMatch && <span className="ml-2 text-xs font-bold text-amber-500 bg-amber-100 rounded px-2 py-0.5">match</span>}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+        {/* Paginator for Favorites */}
+        {totalPagesFavorites > 1 && (
+          <div className="flex justify-center items-center gap-2 mb-4">
+            <button
+              className="px-3 py-1 rounded bg-yellow-100 text-yellow-700 font-bold disabled:opacity-40"
+              onClick={() => setPageFavorites(p => Math.max(0, p - 1))}
+              disabled={pageFavorites === 0}
+            >
+              Prev
+            </button>
+            <span className="text-sm font-semibold text-gray-600">Page {pageFavorites + 1} of {totalPagesFavorites}</span>
+            <button
+              className="px-3 py-1 rounded bg-yellow-100 text-yellow-700 font-bold disabled:opacity-40"
+              onClick={() => setPageFavorites(p => Math.min(totalPagesFavorites - 1, p + 1))}
+              disabled={pageFavorites === totalPagesFavorites - 1}
+            >
+              Next
+            </button>
+          </div>
+        )}
+        {/* Yes */}
+        <h2 className="text-base font-semibold text-green-700 mb-2 text-center">Yes ({yesNames.length})</h2>
+        <ul className="divide-y divide-gray-200 bg-white rounded-lg shadow overflow-x-auto mb-4">
+          {pagedYesNames.length === 0 && <li className="py-3 px-2 text-center text-gray-400">No yes yet.</li>}
+          {pagedYesNames.map(n => {
+            const isMatch = ['yes', 'favorite'].includes(userVotes[String(n.id)]) && ['yes', 'favorite'].includes(otherUserVotes[String(n.id)]);
+            return (
+              <li key={n.id} className="relative flex items-center py-3 px-2 bg-green-50 min-h-[48px]">
+                <span className="absolute left-2 text-green-600 font-bold">YES</span>
+                <span className="mx-auto font-semibold text-lg text-center w-full">
+                  {n.name}
+                  <pre style={{fontSize:'10px',whiteSpace:'pre-wrap',wordBreak:'break-all'}}>{JSON.stringify(n)}</pre>
+                </span>
+                <span className={n.gender === 'boy' ? 'absolute right-2 text-sky-600 flex items-center gap-2' : 'absolute right-2 text-fuchsia-600 flex items-center gap-2'}>
+                  {n.gender}
+                  {isMatch && <span className="ml-2 text-xs font-bold text-amber-500 bg-amber-100 rounded px-2 py-0.5">match</span>}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+        {/* Paginator for Yes */}
+        {totalPagesYes > 1 && (
+          <div className="flex justify-center items-center gap-2 mb-4">
+            <button
+              className="px-3 py-1 rounded bg-green-100 text-green-700 font-bold disabled:opacity-40"
+              onClick={() => setPageYes(p => Math.max(0, p - 1))}
+              disabled={pageYes === 0}
+            >
+              Prev
+            </button>
+            <span className="text-sm font-semibold text-gray-600">Page {pageYes + 1} of {totalPagesYes}</span>
+            <button
+              className="px-3 py-1 rounded bg-green-100 text-green-700 font-bold disabled:opacity-40"
+              onClick={() => setPageYes(p => Math.min(totalPagesYes - 1, p + 1))}
+              disabled={pageYes === totalPagesYes - 1}
+            >
+              Next
+            </button>
+          </div>
+        )}
+        {/* Rest */}
+        <h2 className="text-base font-semibold text-gray-700 mb-2 text-center">Total Names ({totalNames})</h2>
+        <ul className="divide-y divide-gray-200 bg-white rounded-lg shadow overflow-x-auto mb-4">
+          {pagedRestNames.length === 0 && <li className="py-3 px-2 text-center text-gray-400">No total Names.</li>}
+          {pagedRestNames.map(n => (
+            <li key={n.id} className="relative flex items-center py-3 px-2 min-h-[48px]">
+              <span className="absolute left-2 text-gray-500 font-bold">{userVotes[String(n.id)] === 'no' ? 'NO' : userVotes[String(n.id)] === 'yes' ? 'YES' : userVotes[String(n.id)] === 'favorite' ? 'FAV' : 'UNVOTED'}</span>
               <span className="mx-auto font-semibold text-lg text-center w-full">
                 {n.name}
                 <pre style={{fontSize:'10px',whiteSpace:'pre-wrap',wordBreak:'break-all'}}>{JSON.stringify(n)}</pre>
               </span>
-              <span className={n.gender === 'boy' ? 'absolute right-2 text-sky-600 flex items-center gap-2' : 'absolute right-2 text-fuchsia-600 flex items-center gap-2'}>
-                {n.gender}
-                {isMatch && <span className="ml-2 text-xs font-bold text-amber-500 bg-amber-100 rounded px-2 py-0.5">match</span>}
-              </span>
+              <span className={n.gender === 'boy' ? 'absolute right-2 text-sky-600' : 'absolute right-2 text-fuchsia-600'}>{n.gender}</span>
             </li>
-          );
-        })}
-      </ul>
-      {/* Paginator for Favorites */}
-      {totalPagesFavorites > 1 && (
-        <div className="flex justify-center items-center gap-2 mb-4">
-          <button
-            className="px-3 py-1 rounded bg-yellow-100 text-yellow-700 font-bold disabled:opacity-40"
-            onClick={() => setPageFavorites(p => Math.max(0, p - 1))}
-            disabled={pageFavorites === 0}
-          >
-            Prev
-          </button>
-          <span className="text-sm font-semibold text-gray-600">Page {pageFavorites + 1} of {totalPagesFavorites}</span>
-          <button
-            className="px-3 py-1 rounded bg-yellow-100 text-yellow-700 font-bold disabled:opacity-40"
-            onClick={() => setPageFavorites(p => Math.min(totalPagesFavorites - 1, p + 1))}
-            disabled={pageFavorites === totalPagesFavorites - 1}
-          >
-            Next
-          </button>
-        </div>
-      )}
-      {/* Yes */}
-      <h2 className="text-base font-semibold text-green-700 mb-2 text-center">Yes ({yesNames.length})</h2>
-      <ul className="divide-y divide-gray-200 bg-white rounded-lg shadow overflow-x-auto mb-4">
-        {pagedYesNames.length === 0 && <li className="py-3 px-2 text-center text-gray-400">No yes yet.</li>}
-        {pagedYesNames.map(n => {
-          const isMatch = ['yes', 'favorite'].includes(userVotes[String(n.id)]) && ['yes', 'favorite'].includes(otherUserVotes[String(n.id)]);
-          return (
-            <li key={n.id} className="relative flex items-center py-3 px-2 bg-green-50 min-h-[48px]">
-              <span className="absolute left-2 text-green-600 font-bold">YES</span>
-              <span className="mx-auto font-semibold text-lg text-center w-full">
-                {n.name}
-                <pre style={{fontSize:'10px',whiteSpace:'pre-wrap',wordBreak:'break-all'}}>{JSON.stringify(n)}</pre>
-              </span>
-              <span className={n.gender === 'boy' ? 'absolute right-2 text-sky-600 flex items-center gap-2' : 'absolute right-2 text-fuchsia-600 flex items-center gap-2'}>
-                {n.gender}
-                {isMatch && <span className="ml-2 text-xs font-bold text-amber-500 bg-amber-100 rounded px-2 py-0.5">match</span>}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-      {/* Paginator for Yes */}
-      {totalPagesYes > 1 && (
-        <div className="flex justify-center items-center gap-2 mb-4">
-          <button
-            className="px-3 py-1 rounded bg-green-100 text-green-700 font-bold disabled:opacity-40"
-            onClick={() => setPageYes(p => Math.max(0, p - 1))}
-            disabled={pageYes === 0}
-          >
-            Prev
-          </button>
-          <span className="text-sm font-semibold text-gray-600">Page {pageYes + 1} of {totalPagesYes}</span>
-          <button
-            className="px-3 py-1 rounded bg-green-100 text-green-700 font-bold disabled:opacity-40"
-            onClick={() => setPageYes(p => Math.min(totalPagesYes - 1, p + 1))}
-            disabled={pageYes === totalPagesYes - 1}
-          >
-            Next
-          </button>
-        </div>
-      )}
-      {/* Rest */}
-      <h2 className="text-base font-semibold text-gray-700 mb-2 text-center">Total Names ({totalNames})</h2>
-      <ul className="divide-y divide-gray-200 bg-white rounded-lg shadow overflow-x-auto mb-4">
-        {pagedRestNames.length === 0 && <li className="py-3 px-2 text-center text-gray-400">No total Names.</li>}
-        {pagedRestNames.map(n => (
-          <li key={n.id} className="relative flex items-center py-3 px-2 min-h-[48px]">
-            <span className="absolute left-2 text-gray-500 font-bold">{userVotes[String(n.id)] === 'no' ? 'NO' : userVotes[String(n.id)] === 'yes' ? 'YES' : userVotes[String(n.id)] === 'favorite' ? 'FAV' : 'UNVOTED'}</span>
-            <span className="mx-auto font-semibold text-lg text-center w-full">
-              {n.name}
-              <pre style={{fontSize:'10px',whiteSpace:'pre-wrap',wordBreak:'break-all'}}>{JSON.stringify(n)}</pre>
-            </span>
-            <span className={n.gender === 'boy' ? 'absolute right-2 text-sky-600' : 'absolute right-2 text-fuchsia-600'}>{n.gender}</span>
-          </li>
-        ))}
-      </ul>
-      {/* Paginator for Total Names */}
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 mb-4">
-          <button
-            className="px-3 py-1 rounded bg-fuchsia-100 text-fuchsia-700 font-bold disabled:opacity-40"
-            onClick={() => setPage(p => Math.max(0, p - 1))}
-            disabled={page === 0}
-          >
-            Prev
-          </button>
-          <span className="text-sm font-semibold text-gray-600">Page {page + 1} of {totalPages}</span>
-          <button
-            className="px-3 py-1 rounded bg-fuchsia-100 text-fuchsia-700 font-bold disabled:opacity-40"
-            onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-            disabled={page === totalPages - 1}
-          >
-            Next
-          </button>
-        </div>
-      )}
+          ))}
+        </ul>
+        {/* Paginator for Total Names */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mb-4">
+            <button
+              className="px-3 py-1 rounded bg-fuchsia-100 text-fuchsia-700 font-bold disabled:opacity-40"
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+            >
+              Prev
+            </button>
+            <span className="text-sm font-semibold text-gray-600">Page {page + 1} of {totalPages}</span>
+            <button
+              className="px-3 py-1 rounded bg-fuchsia-100 text-fuchsia-700 font-bold disabled:opacity-40"
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page === totalPages - 1}
+            >
+              Next
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
