@@ -11,7 +11,7 @@ const swipePower = (offset: number, velocity: number) => {
 };
 
 // Accept allNames and userVotes as props
-export function CardStack({ allNames, userVotes, otherUserVotes, currentUser, refreshUserVotes }: { allNames: any[], userVotes: Record<string, string>, otherUserVotes: Record<string, string>, currentUser: string, refreshUserVotes?: () => void }) {
+export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }: { allNames: any[], userVotes: Record<string, string>, otherUserVotes: Record<string, string>, currentUser: string, refreshUserVotes?: () => void }) {
   // Store the actual name objects, not just ids
   const [deck, setDeck] = useState<any[]>([]);
   const dragging = useRef(false);
@@ -43,11 +43,6 @@ export function CardStack({ allNames, userVotes, otherUserVotes, currentUser, re
     inNoOrder.sort((a, b) => noOrder.indexOf(a.id) - noOrder.indexOf(b.id));
     setDeck([...notInNoOrder, ...inNoOrder]);
   }, [allNames, userVotes, currentUser]);
-
-  // Helper to check for match
-  function isMatch(nameId: string) {
-    return ['yes', 'favorite'].includes(userVotes[nameId]) && ['yes', 'favorite'].includes(otherUserVotes[nameId]);
-  }
 
   // Helpers for sessionStorage 'no' order
   function getNoOrderKey(user: string) {
