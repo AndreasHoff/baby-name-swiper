@@ -1,5 +1,5 @@
 [
-    { "name": "Storm", "gender": "boy" },
+  { "name": "Storm", "gender": "boy" },
   { "name": "Sofie", "gender": "girl" },
   { "name": "Emil", "gender": "boy" },
   { "name": "Ida", "gender": "girl" },
@@ -294,5 +294,12 @@
   { "name": "Aase", "gender": "girl" },
   { "name": "Tove", "gender": "girl" },
   { "name": "Lis", "gender": "girl" },
-  { "name": "Inga", "gender": "girl" }
+  { "name": "Inga", "gender": "girl" },
+  { "name": "Freja", "gender": "girl" },
+  { "name": "Noah", "gender": "boy" },
+  { "name": "Asta", "gender": "girl" },
+  { "name": "Mikkel", "gender": "boy" },
+  { "name": "Saga", "gender": "girl" },
+  { "name": "Viggo", "gender": "boy" },
+  { "name": "Liv", "gender": "girl" }
 ]

@@ -30,6 +30,7 @@ function App() {
   const [view, setView] = useState<'main' | 'lists' | 'settings'>('main');
   const [allNames, setAllNames] = useState<Name[]>([]);
   const [userVotes, setUserVotes] = useState<Record<string, string>>({});
+  const [otherUserVotes, setOtherUserVotes] = useState<Record<string, string>>({});
   const [showAddSuccess, setShowAddSuccess] = useState(false);
   const [lastAddedName, setLastAddedName] = useState('');
   const [showAddError, setShowAddError] = useState(false);
@@ -74,10 +75,26 @@ function App() {
     }
   };
 
+  // Fetch other user's votes
+  const fetchOtherUserVotes = async () => {
+    if (!currentUser) return;
+    const otherUser = currentUser === 'Andreas' ? 'Emilie' : 'Andreas';
+    try {
+      const userRef = doc(db, 'users', otherUser);
+      const userSnap = await getDoc(userRef);
+      const data = userSnap.exists() ? userSnap.data() : {};
+      setOtherUserVotes(data.votes || {});
+      console.log('[App] Other user votes:', data.votes || {});
+    } catch (error) {
+      console.error('[App] Error fetching other user votes:', error);
+    }
+  };
+
   useEffect(() => {
     if (currentUser) {
       fetchAllNames();
       fetchUserVotes();
+      fetchOtherUserVotes();
     }
   }, [currentUser]);
 
@@ -222,6 +239,7 @@ function App() {
           currentView={view}
           allNames={allNames}
           userVotes={userVotes}
+          otherUserVotes={otherUserVotes}
           currentUser={currentUser}
           onNameAdded={handleNameAdded}
           onLogout={handleLogout}

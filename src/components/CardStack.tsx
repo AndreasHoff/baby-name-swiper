@@ -1,4 +1,4 @@
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import Modal from 'react-modal';
@@ -11,52 +11,64 @@ const swipePower = (offset: number, velocity: number) => {
 };
 
 // Accept allNames and userVotes as props
-export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }: { allNames: any[], userVotes: Record<string, string>, currentUser: string, refreshUserVotes?: () => void }) {
+export function CardStack({ allNames, userVotes, otherUserVotes, currentUser, refreshUserVotes }: { allNames: any[], userVotes: Record<string, string>, otherUserVotes: Record<string, string>, currentUser: string, refreshUserVotes?: () => void }) {
   // Store the actual name objects, not just ids
   const [deck, setDeck] = useState<any[]>([]);
-  const [shuffleOrder, setShuffleOrder] = useState<string[] | null>(null);
-  const lastNoVotedId = useRef<string | null>(null);
   const dragging = useRef(false);
   const [dragX, setDragX] = useState(0);
   const [animating, setAnimating] = useState<null | 'no' | 'favorite' | 'yes'>(null);
+  const [leavingCard, setLeavingCard] = useState<any | null>(null);
   // Only show names left in the deck in the modal
   const [showAllModal, setShowAllModal] = useState(false);
   const [allPage, setAllPage] = useState(0);
   const allPageSize = 10;
   const totalAllPages = Math.ceil(deck.length / allPageSize);
   const pagedAllNames = deck.slice(allPage * allPageSize, (allPage + 1) * allPageSize);
+  const [matchModal, setMatchModal] = useState<{ open: boolean, name: string | null }>({ open: false, name: null });
 
   // Build deck: filter out names with 'yes' or 'favorite' vote
   useEffect(() => {
     if (!currentUser) return;
     const unvoted = allNames.filter((n) => {
       const vote = userVotes?.[n.id];
-      const include = vote !== 'yes' && vote !== 'favorite';
-      if (!include) console.log('[CardStack] Filtering out name:', n.name, 'vote:', vote);
-      return include;
+      return vote !== 'yes' && vote !== 'favorite';
     });
-    console.log('[CardStack] Deck filtered, count:', unvoted.length);
-    // If we just voted 'no', move that card to the back if still present
-    if (lastNoVotedId.current && unvoted.some((n) => n.id === lastNoVotedId.current)) {
-      const filtered = unvoted.filter((n) => n.id !== lastNoVotedId.current);
-      const card = unvoted.find((n) => n.id === lastNoVotedId.current);
-      lastNoVotedId.current = null;
-      const newDeck = card ? [...filtered, card] : filtered;
-      if (shuffleOrder && arraysEqual(shuffleOrder, newDeck.map(n => n.id))) {
-        setDeck(applyOrder(newDeck, shuffleOrder));
-      } else {
-        setShuffleOrder(null);
-        setDeck(newDeck);
-      }
-    } else {
-      if (shuffleOrder && arraysEqual(shuffleOrder, unvoted.map(n => n.id))) {
-        setDeck(applyOrder(unvoted, shuffleOrder));
-      } else {
-        setShuffleOrder(null);
-        setDeck(unvoted);
-      }
-    }
+    // Reorder deck so names in sessionStorage 'no' order are at the end
+    const noOrder = getNoOrder(currentUser);
+    const inNoOrder = unvoted.filter(n => noOrder.includes(n.id));
+    const notInNoOrder = unvoted.filter(n => !noOrder.includes(n.id));
+    // Keep the order of noOrder for those names
+    inNoOrder.sort((a, b) => noOrder.indexOf(a.id) - noOrder.indexOf(b.id));
+    setDeck([...notInNoOrder, ...inNoOrder]);
   }, [allNames, userVotes, currentUser]);
+
+  // Helper to check for match
+  function isMatch(nameId: string) {
+    return ['yes', 'favorite'].includes(userVotes[nameId]) && ['yes', 'favorite'].includes(otherUserVotes[nameId]);
+  }
+
+  // Helpers for sessionStorage 'no' order
+  function getNoOrderKey(user: string) {
+    return `noOrder_${user}`;
+  }
+  function getNoOrder(user: string): string[] {
+    const raw = window.sessionStorage.getItem(getNoOrderKey(user));
+    return raw ? JSON.parse(raw) : [];
+  }
+  function setNoOrder(user: string, arr: string[]) {
+    window.sessionStorage.setItem(getNoOrderKey(user), JSON.stringify(arr));
+  }
+  function addToNoOrder(user: string, id: string) {
+    const arr = getNoOrder(user);
+    if (!arr.includes(id)) {
+      arr.push(id);
+      setNoOrder(user, arr);
+    }
+  }
+  function removeFromNoOrder(user: string, id: string) {
+    const arr = getNoOrder(user).filter(x => x !== id);
+    setNoOrder(user, arr);
+  }
 
   // Voting logic: update only the user's votes map in Firestore
   const handleVote = async (direction: 'yes' | 'no' | 'favorite') => {
@@ -64,20 +76,41 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
     if (!card) return;
     console.log('[CardStack] User voted', direction, 'for', card.name, card.id);
     if (direction === 'no') {
-      lastNoVotedId.current = card.id;
-      setDeck((prev) => {
-        const rest = prev.slice(1);
-        console.log('[CardStack] Moving card to back of deck:', card.name);
-        return [...rest, card];
-      });
-    } else {
-      setDeck((prev) => prev.slice(1));
-      console.log('[CardStack] Removing card from deck:', card.name);
+      addToNoOrder(currentUser, card.id);
+      setDeck((prev) => prev.slice(1)); // Just remove from top, deck will rebuild in useEffect
+      setAnimating(direction);
+      setTimeout(() => setAnimating(null), 400);
+    } else if (direction === 'favorite' || direction === 'yes') {
+      removeFromNoOrder(currentUser, card.id);
+      if (direction === 'favorite') {
+        setLeavingCard(card); // Set the floating card
+        setDeck((prev) => prev.slice(1)); // Remove from stack immediately
+        setAnimating('favorite');
+        setTimeout(() => {
+          setLeavingCard(null); // Remove floating card after animation
+          setAnimating(null);
+        }, 1200); // Match favorite animation duration (1.2s)
+      } else {
+        setDeck((prev) => prev.slice(1));
+        setAnimating(direction);
+        setTimeout(() => setAnimating(null), 400);
+      }
     }
-    setAnimating(direction);
     try {
       const userRef = doc(db, 'users', currentUser);
       await updateDoc(userRef, { [`votes.${card.id}`]: direction });
+      // --- Update votes map on the baby name document ---
+      const nameRef = doc(db, 'baby-names', card.id);
+      // Get the latest votes for this name
+      const nameSnap = await getDoc(nameRef);
+      const nameData = nameSnap.exists() ? nameSnap.data() : {};
+      const updatedVotes = { ...nameData.votes, [currentUser]: direction };
+      const otherUser = currentUser === 'Andreas' ? 'Emilie' : 'Andreas';
+      const userVote = updatedVotes[currentUser];
+      const otherVote = updatedVotes[otherUser];
+      const isAMatch = ['yes', 'favorite'].includes(userVote) && ['yes', 'favorite'].includes(otherVote);
+      await updateDoc(nameRef, { votes: updatedVotes, isAMatch });
+      // --- End update ---
       if (refreshUserVotes) {
         refreshUserVotes();
       }
@@ -85,39 +118,74 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
     } catch (e) {
       console.error('[CardStack] Firestore update failed:', e);
     }
+    // After voting, check for match
+    if (['yes', 'favorite'].includes(direction) && isMatch(card.id)) {
+      setTimeout(() => {
+        setMatchModal({ open: true, name: card.name });
+      }, 500); // Show after animation
+    }
+    // After updating the deck, log the current deck order (names only)
     setTimeout(() => {
-      setAnimating(null);
-    }, 400);
+      console.log('[CardStack] Deck after vote:', deck.map(n => n.name));
+    }, 10); // Delay to ensure deck state is updated
   };
-
-  // Helper: check if two arrays of ids are equal (order matters)
-  function arraysEqual(a: string[], b: string[]) {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
-    return true;
-  }
-  // Helper: apply an order of ids to an array of name objects
-  function applyOrder(arr: any[], order: string[]) {
-    const map = Object.fromEntries(arr.map(n => [n.id, n]));
-    return order.map(id => map[id]).filter(Boolean);
-  }
 
   // Show a visible stack of up to 5 cards
   const stack = deck.slice(0, 5);
   const animationVariants = {
     yes: { x: [0, 30, 0], boxShadow: '0 8px 24px 0 rgba(34,197,94,0.18)' },
     no: { x: [0, -30, 0], boxShadow: '0 8px 24px 0 rgba(239,68,68,0.18)' },
-    favorite: { scale: [1, 1.1, 1], boxShadow: '0 8px 24px 0 rgba(253,224,71,0.18)' },
+    favorite: {
+      y: [0, -30, -80],
+      scale: [1, 1.12, 1],
+      boxShadow: '0 0 0 8px rgba(253,224,71,0.25), 0 8px 60px 0 rgba(253,224,71,0.55)',
+      filter: [
+        'brightness(1) drop-shadow(0 0 16px #fde047)',
+        'brightness(1.55) drop-shadow(0 0 32px #fde047)',
+        'brightness(1) drop-shadow(0 0 16px #fde047)'
+      ],
+      transition: { duration: 1.2, ease: [0.4, 0, 0.2, 1] }
+    },
     none: {},
   };
 
-  // If there are no cards left, don't render the card stack division at all
+  // If there are no cards left, show a custom message
   if (deck.length === 0) {
-    return null;
+    return (
+      <div className="w-full flex flex-col items-center justify-center min-h-[300px] p-6">
+        <div className="text-3xl sm:text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 via-amber-400 to-sky-400 drop-shadow-lg text-center mb-4 flex items-center justify-center gap-2" style={{letterSpacing: '0.01em'}}>
+          <span role="img" aria-label="heart" className="text-4xl align-middle" style={{verticalAlign: 'middle'}}>💖</span>
+          No more names.
+        </div>
+        <div className="text-lg sm:text-xl font-semibold text-center max-w-md bg-clip-text text-transparent bg-gradient-to-r from-sky-500 via-fuchsia-400 to-amber-400 drop-shadow" style={{lineHeight: 1.5}}>
+          Please contact your boyfriend and let him know that you love and support him<br/>and want him to add more features to this lovely app.
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="w-full">
+      {/* Match Modal */}
+      <Modal
+        isOpen={matchModal.open}
+        onRequestClose={() => setMatchModal({ open: false, name: null })}
+        contentLabel="Match!"
+        ariaHideApp={false}
+        className="fixed inset-0 flex items-center justify-center z-50"
+        overlayClassName="fixed inset-0 bg-black bg-opacity-40 z-40"
+      >
+        <div className="modal-container bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full flex flex-col items-center">
+          <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-fuchsia-400 to-sky-400 drop-shadow mb-4">Match! 🎉</h2>
+          <div className="text-2xl font-bold text-fuchsia-700 mb-2">{matchModal.name}</div>
+          <button
+            className="mt-6 px-6 py-2 rounded-lg bg-gradient-to-br from-fuchsia-400 to-amber-400 text-white font-bold shadow hover:from-fuchsia-500 hover:to-amber-500 transition-all duration-200"
+            onClick={() => setMatchModal({ open: false, name: null })}
+          >
+            Close
+          </button>
+        </div>
+      </Modal>
       {/* 1st Row: Headline */}
       <div className="flex justify-center mb-4 px-4">
         <h1 className="text-3xl sm:text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-fuchsia-400 to-amber-400 drop-shadow-lg text-center flex items-center justify-center gap-2" style={{letterSpacing: '0.01em'}}>
@@ -127,6 +195,28 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
       </div>
       {/* 2nd Row: Card Stack */}
       <div className="flex justify-center relative px-4" style={{ minHeight: '300px' }}>
+        {/* Floating leavingCard for favorite animation */}
+        {leavingCard && animating === 'favorite' && (
+          <motion.div
+            key={leavingCard.id + '-leaving'}
+            initial={{ y: 0, scale: 1, opacity: 1 }}
+            animate={animationVariants.favorite}
+            exit={{ opacity: 0 }}
+            transition={animationVariants.favorite.transition}
+            className={`cardstack-card bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200 text-fuchsia-900 rounded-3xl shadow-2xl px-4 py-5 w-full min-h-[90px] flex flex-col items-center justify-center border-4 border-white select-none absolute left-0 right-0 mx-auto pointer-events-none`}
+            style={{
+              top: 0,
+              zIndex: 99,
+              boxShadow: `0 4px 16px 0 rgba(0,0,0,0.10)`
+            }}
+          >
+            <span className="text-4xl sm:text-5xl font-extrabold mb-3 sm:mb-4 drop-shadow-lg text-center">{leavingCard.name}</span>
+            <span className="text-base sm:text-lg font-semibold uppercase tracking-widest px-4 py-2 rounded-full bg-white bg-opacity-40 mt-3 sm:mt-4 shadow text-fuchsia-700 border border-fuchsia-200">
+              {leavingCard.gender}
+            </span>
+          </motion.div>
+        )}
+        {/* Card stack */}
         <AnimatePresence>
           {stack.map((card, i) => {
             let topPx = 0;
@@ -135,8 +225,10 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
             else if (i === 3) topPx = 12;
             else if (i === 4) topPx = 16;
             const zIndex = stack.length - i;
+            // Only animate the top card if not animating favorite (handled by floating card)
             const isTop = i === 0;
-            const transition = isTop && animating
+            const shouldAnimate = isTop && animating && animating !== 'favorite';
+            const transition = shouldAnimate
               ? { type: 'tween', duration: 0.35, ease: 'easeInOut' }
               : { type: 'spring', stiffness: 200, damping: 20 };
             return (
@@ -147,7 +239,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
                   y: 0,
                   opacity: 1,
                   scale: 1,
-                  ...(isTop && animating ? animationVariants[animating] : {})
+                  ...(shouldAnimate ? animationVariants[animating!] : {})
                 }}
                 exit={{ y: -40, opacity: 0, scale: 1 }}
                 transition={transition}
@@ -165,11 +257,25 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
                   } else if (swipe > swipeConfidenceThreshold) {
                     await handleVote('yes');
                   }
-                }) : undefined}                onDrag={isTop ? ((_, info) => setDragX(info.offset.x)) : undefined}
+                }) : undefined}
+                onDrag={isTop ? ((_, info) => setDragX(info.offset.x)) : undefined}
                 className={`cardstack-card bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200 text-fuchsia-900 rounded-3xl shadow-2xl px-4 py-5 w-full min-h-[90px] flex flex-col items-center justify-center border-4 border-white select-none absolute left-0 right-0 mx-auto pointer-events-none` + (isTop ? ' pointer-events-auto' : '')}
-                style={{ top: topPx, zIndex, boxShadow: `0 ${4 + i * 2}px ${16 - i * 2}px 0 rgba(0,0,0,0.10)` }}
+                style={{
+                  top: topPx,
+                  zIndex,
+                  boxShadow: `0 ${4 + i * 2}px ${16 - i * 2}px 0 rgba(0,0,0,0.10)`,
+                  background:
+                    isTop && dragX < -30
+                      ? 'linear-gradient(135deg, #fee2e2 0%, #fca5a5 100%)' // Red tint for NO
+                      : isTop && dragX > 30
+                      ? 'linear-gradient(135deg, #bbf7d0 0%, #4ade80 100%)' // Green tint for YES
+                      : undefined,
+                  transition: 'background 0.2s cubic-bezier(0.4,0,0.2,1)'
+                }}
                 whileTap={isTop ? { scale: 0.97 } : undefined}
-                whileDrag={isTop ? { rotate: dragX / 30 } : undefined}              >                <span className="text-4xl sm:text-5xl font-extrabold mb-3 sm:mb-4 drop-shadow-lg text-center">{card.name}</span>
+                whileDrag={isTop ? { rotate: dragX / 30 } : undefined}
+              >
+                <span className="text-4xl sm:text-5xl font-extrabold mb-3 sm:mb-4 drop-shadow-lg text-center">{card.name}</span>
                 <span className="text-base sm:text-lg font-semibold uppercase tracking-widest px-4 py-2 rounded-full bg-white bg-opacity-40 mt-3 sm:mt-4 shadow text-fuchsia-700 border border-fuchsia-200">
                   {card.gender}
                 </span>

@@ -7,6 +7,7 @@ interface MainLayoutProps {
   currentView: 'main' | 'lists' | 'settings';
   allNames: any[];
   userVotes: Record<string, string>;
+  otherUserVotes: Record<string, string>;
   currentUser: string;
   onNameAdded: (name: string, gender: 'boy' | 'girl') => void;
   onLogout: () => void;
@@ -17,6 +18,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   currentView, 
   allNames, 
   userVotes,
+  otherUserVotes,
   currentUser, 
   onNameAdded,
   onLogout,
@@ -45,7 +47,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     console.log('[MainLayout] Showing lists view');
     return (
       <div className="w-full max-w-[430px] mx-auto px-0 pb-6">
-        <NameListView allNames={allNames} userVotes={userVotes} currentUser={currentUser} />
+        <NameListView allNames={allNames} userVotes={userVotes} otherUserVotes={otherUserVotes} currentUser={currentUser} />
       </div>
     );
   }
@@ -54,7 +56,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   console.log('[MainLayout] Showing card stack view');
   return (
     <div className="w-full max-w-[430px] mx-auto px-0">
-      <CardStack allNames={allNames} userVotes={userVotes} currentUser={currentUser} refreshUserVotes={refreshUserVotes} />
+      <CardStack allNames={allNames} userVotes={userVotes} otherUserVotes={otherUserVotes} currentUser={currentUser} refreshUserVotes={refreshUserVotes} />
     </div>
   );
 };

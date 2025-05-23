@@ -1,12 +1,28 @@
+import { collection, getDocs } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
+import { db } from '../firebase';
 
 // Accept allNames, userVotes, and currentUser as props
-export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string, string>; currentUser: string }> = ({ allNames, userVotes, currentUser }) => {
+export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string, string>; otherUserVotes: Record<string, string>; currentUser: string }> = ({ allNames, userVotes, otherUserVotes, currentUser }) => {
   const [freshNames, setFreshNames] = useState<any[]>(allNames);
+  const [totalNames, setTotalNames] = useState<number>(allNames.length);
 
   useEffect(() => {
     setFreshNames(allNames);
   }, [allNames]);
+
+  // Fetch total count of baby-names from Firestore for the header
+  useEffect(() => {
+    async function fetchTotalNames() {
+      try {
+        const snap = await getDocs(collection(db, 'baby-names'));
+        setTotalNames(snap.size);
+      } catch (e) {
+        console.error('[NameListView] Failed to fetch total baby-names:', e);
+      }
+    }
+    fetchTotalNames();
+  }, []);
 
   if (!Array.isArray(allNames) || !currentUser) return null;
 
@@ -15,19 +31,18 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
   // Partition names by userVotes
   const favoriteNames = freshNames.filter(n => userVotes[n.id] === 'favorite');
   const yesNames = freshNames.filter(n => userVotes[n.id] === 'yes');
-  const restNames = freshNames.filter(n => !['yes', 'favorite'].includes(userVotes[n.id]));
-  console.log('[NameListView] Partitioned. Favorites:', favoriteNames.length, 'Yes:', yesNames.length, 'Rest:', restNames.length);
+  // For total names, show ALL names from Firestore, not just unvoted
+  const totalNamesList = freshNames;
 
-  // Pagination state for 'Other Names'
+  // Pagination state for 'Total Names'
   const [page, setPage] = useState(0);
-  const pageSize = 7;
-  const pageSizeYes = 3;
-  const pageSizeFavorites = 3;
-  const totalPages = Math.ceil(restNames.length / pageSize);
-  const pagedRestNames = restNames.slice(page * pageSize, (page + 1) * pageSize);
+  const pageSize = 10; // 10 rows per page for Total Names
+  const totalPages = Math.ceil(totalNamesList.length / pageSize);
+  const pagedRestNames = totalNamesList.slice(page * pageSize, (page + 1) * pageSize);
 
   // Pagination for Yes
   const [pageYes, setPageYes] = useState(0);
+  const pageSizeYes = 3; // 3 rows per page for Yes
   const totalPagesYes = Math.ceil(yesNames.length / pageSizeYes);
   const pagedYesNames = yesNames.slice(pageYes * pageSizeYes, (pageYes + 1) * pageSizeYes);
   useEffect(() => {
@@ -36,6 +51,7 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
 
   // Pagination for Favorites
   const [pageFavorites, setPageFavorites] = useState(0);
+  const pageSizeFavorites = 3; // 3 rows per page for Favorites
   const totalPagesFavorites = Math.ceil(favoriteNames.length / pageSizeFavorites);
   const pagedFavoriteNames = favoriteNames.slice(pageFavorites * pageSizeFavorites, (pageFavorites + 1) * pageSizeFavorites);
   useEffect(() => {
@@ -50,16 +66,22 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
         <span className="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 via-fuchsia-400 to-amber-400 drop-shadow">Baby Name Swiper</span>
       </div>
       {/* Favorites */}
-      <h2 className="text-base font-semibold text-yellow-700 mb-2 text-center">Favorites</h2>
+      <h2 className="text-base font-semibold text-yellow-700 mb-2 text-center">Favorites ({favoriteNames.length})</h2>
       <ul className="divide-y divide-gray-200 bg-white rounded-lg shadow overflow-x-auto mb-4">
         {pagedFavoriteNames.length === 0 && <li className="py-3 px-2 text-center text-gray-400">No favorites yet.</li>}
-        {pagedFavoriteNames.map(n => (
-          <li key={n.id} className="relative flex items-center py-3 px-2 bg-yellow-50 min-h-[48px]">
-            <span className="absolute left-2 text-yellow-500 font-bold flex items-center gap-1">FAVORITE <span role='img' aria-label='star'>⭐</span></span>
-            <span className="mx-auto font-semibold text-lg text-center w-full pointer-events-none select-none" style={{position:'relative',zIndex:1}}>{n.name}</span>
-            <span className={n.gender === 'boy' ? 'absolute right-2 text-sky-600' : 'absolute right-2 text-fuchsia-600'}>{n.gender}</span>
-          </li>
-        ))}
+        {pagedFavoriteNames.map(n => {
+          const isMatch = ['yes', 'favorite'].includes(userVotes[n.id]) && ['yes', 'favorite'].includes(otherUserVotes[n.id]);
+          return (
+            <li key={n.id} className="relative flex items-center py-3 px-2 bg-yellow-50 min-h-[48px]">
+              <span className="absolute left-2 text-yellow-500 font-bold flex items-center gap-1">FAVORITE <span role='img' aria-label='star'>⭐</span></span>
+              <span className="mx-auto font-semibold text-lg text-center w-full pointer-events-none select-none" style={{position:'relative',zIndex:1}}>{n.name}</span>
+              <span className={n.gender === 'boy' ? 'absolute right-2 text-sky-600 flex items-center gap-2' : 'absolute right-2 text-fuchsia-600 flex items-center gap-2'}>
+                {n.gender}
+                {isMatch && <span className="ml-2 text-xs font-bold text-amber-500 bg-amber-100 rounded px-2 py-0.5">match</span>}
+              </span>
+            </li>
+          );
+        })}
       </ul>
       {/* Paginator for Favorites */}
       {totalPagesFavorites > 1 && (
@@ -82,16 +104,22 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
         </div>
       )}
       {/* Yes */}
-      <h2 className="text-base font-semibold text-green-700 mb-2 text-center">Yes</h2>
+      <h2 className="text-base font-semibold text-green-700 mb-2 text-center">Yes ({yesNames.length})</h2>
       <ul className="divide-y divide-gray-200 bg-white rounded-lg shadow overflow-x-auto mb-4">
         {pagedYesNames.length === 0 && <li className="py-3 px-2 text-center text-gray-400">No yes yet.</li>}
-        {pagedYesNames.map(n => (
-          <li key={n.id} className="relative flex items-center py-3 px-2 bg-green-50 min-h-[48px]">
-            <span className="absolute left-2 text-green-600 font-bold">YES</span>
-            <span className="mx-auto font-semibold text-lg text-center w-full pointer-events-none select-none" style={{position:'relative',zIndex:1}}>{n.name}</span>
-            <span className={n.gender === 'boy' ? 'absolute right-2 text-sky-600' : 'absolute right-2 text-fuchsia-600'}>{n.gender}</span>
-          </li>
-        ))}
+        {pagedYesNames.map(n => {
+          const isMatch = ['yes', 'favorite'].includes(userVotes[n.id]) && ['yes', 'favorite'].includes(otherUserVotes[n.id]);
+          return (
+            <li key={n.id} className="relative flex items-center py-3 px-2 bg-green-50 min-h-[48px]">
+              <span className="absolute left-2 text-green-600 font-bold">YES</span>
+              <span className="mx-auto font-semibold text-lg text-center w-full pointer-events-none select-none" style={{position:'relative',zIndex:1}}>{n.name}</span>
+              <span className={n.gender === 'boy' ? 'absolute right-2 text-sky-600 flex items-center gap-2' : 'absolute right-2 text-fuchsia-600 flex items-center gap-2'}>
+                {n.gender}
+                {isMatch && <span className="ml-2 text-xs font-bold text-amber-500 bg-amber-100 rounded px-2 py-0.5">match</span>}
+              </span>
+            </li>
+          );
+        })}
       </ul>
       {/* Paginator for Yes */}
       {totalPagesYes > 1 && (
@@ -114,18 +142,18 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
         </div>
       )}
       {/* Rest */}
-      <h2 className="text-base font-semibold text-gray-700 mb-2 text-center">Other Names</h2>
+      <h2 className="text-base font-semibold text-gray-700 mb-2 text-center">Total Names ({totalNames})</h2>
       <ul className="divide-y divide-gray-200 bg-white rounded-lg shadow overflow-x-auto mb-4">
-        {pagedRestNames.length === 0 && <li className="py-3 px-2 text-center text-gray-400">No other names.</li>}
+        {pagedRestNames.length === 0 && <li className="py-3 px-2 text-center text-gray-400">No total Names.</li>}
         {pagedRestNames.map(n => (
           <li key={n.id} className="relative flex items-center py-3 px-2 min-h-[48px]">
-            <span className="absolute left-2 text-gray-500 font-bold">{userVotes[n.id] === 'no' ? 'NO' : 'UNVOTED'}</span>
+            <span className="absolute left-2 text-gray-500 font-bold">{userVotes[n.id] === 'no' ? 'NO' : userVotes[n.id] === 'yes' ? 'YES' : userVotes[n.id] === 'favorite' ? 'FAV' : 'UNVOTED'}</span>
             <span className="mx-auto font-semibold text-lg text-center w-full pointer-events-none select-none" style={{position:'relative',zIndex:1}}>{n.name}</span>
             <span className={n.gender === 'boy' ? 'absolute right-2 text-sky-600' : 'absolute right-2 text-fuchsia-600'}>{n.gender}</span>
           </li>
         ))}
       </ul>
-      {/* Paginator for Other Names */}
+      {/* Paginator for Total Names */}
       {totalPages > 1 && (
         <div className="flex justify-center items-center gap-2 mb-4">
           <button

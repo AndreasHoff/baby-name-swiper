@@ -34,8 +34,9 @@ async function main() {
     await db.collection('baby-names').add({
       name,
       gender,
-      created: new Date().toISOString(),
-      votes: { Andreas: null, Emilie: null },
+      votes: {},
+      isAMatch: false,
+      created: new Date().toISOString()
     });
     added++;
   }
