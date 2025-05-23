@@ -12,7 +12,19 @@ export const AddBabyName: React.FC<AddBabyNameProps> = ({ onNameAdded }) => {
     e.preventDefault();
     console.log('[AddBabyName] Form submitted:', name, gender);
     if (!name.trim()) return;
-    if (onNameAdded) onNameAdded(name.trim(), gender);
+    // Create the new name object with extra fields
+    const newName = {
+      name: name.trim(),
+      gender,
+      votes: {}, // votes map for Firestore
+      isAMatch: false, // default value
+      createdAt: new Date().toISOString(), // timestamp for analytics/admin
+      addedBy: 'user', // or use user id if available
+    };
+    // Pass the name and gender as before, but also log the full object for now
+    if (onNameAdded) onNameAdded(newName.name, newName.gender);
+    // Optionally: send newName to Firestore here if needed
+    console.log('[AddBabyName] Full new name object:', newName);
     setName('');
     setGender('boy');
   };
