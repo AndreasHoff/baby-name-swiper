@@ -60,6 +60,15 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
 
   return (
     <div className="w-full max-w-[430px] pl-0 pr-2 mt-2 mx-auto">
+      {/* DEBUG PANEL - REMOVE AFTER DEBUGGING */}
+      <div className="bg-yellow-50 border border-yellow-300 rounded p-2 mb-2 text-xs text-yellow-900">
+        <div><b>DEBUG:</b></div>
+        <div>allNames: {Array.isArray(allNames) ? allNames.length : 'N/A'}</div>
+        <div>freshNames: {Array.isArray(freshNames) ? freshNames.length : 'N/A'}</div>
+        <div>userVotes: {Object.keys(userVotes).length}</div>
+        <div>First 3 allNames: {Array.isArray(allNames) ? allNames.slice(0,3).map(n => n.name).join(', ') : 'N/A'}</div>
+        <div>First 3 freshNames: {Array.isArray(freshNames) ? freshNames.slice(0,3).map(n => n.name).join(', ') : 'N/A'}</div>
+      </div>
       {/* App logo and name at the very top */}
       <div className="flex flex-row items-center justify-center gap-3 mt-2 mb-1">
         <span role="img" aria-label="baby" className="text-4xl align-middle">👶</span>
