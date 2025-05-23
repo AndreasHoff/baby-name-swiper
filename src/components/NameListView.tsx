@@ -60,28 +60,7 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
 
   return (
     <div>
-      {/* ULTRA DEBUG: Show first name and JSON at the very top, huge and colored */}
-      {freshNames.length > 0 && (
-        <div style={{color: 'red', fontSize: 24, background: 'yellow', padding: 8, marginBottom: 16}}>
-          <div>n.name: {freshNames[0].name ? freshNames[0].name : '[undefined]'}</div>
-          <div>n JSON: {JSON.stringify(freshNames[0])}</div>
-        </div>
-      )}
       <div className="w-full max-w-[430px] pl-0 pr-2 mt-2 mx-auto">
-        {/* DEBUG PANEL - REMOVE AFTER DEBUGGING */}
-        <div className="bg-yellow-50 border border-yellow-300 rounded p-2 mb-2 text-xs text-yellow-900">
-          <div><b>DEBUG:</b></div>
-          <div>allNames: {Array.isArray(allNames) ? allNames.length : 'N/A'}</div>
-          <div>freshNames: {Array.isArray(freshNames) ? freshNames.length : 'N/A'}</div>
-          <div>userVotes: {Object.keys(userVotes).length}</div>
-          <div>First 3 allNames: {Array.isArray(allNames) ? allNames.slice(0,3).map(n => n.name).join(', ') : 'N/A'}</div>
-          <div>First 3 freshNames: {Array.isArray(freshNames) ? freshNames.slice(0,3).map(n => n.name).join(', ') : 'N/A'}</div>
-          <div>First 3 userVotes keys: {Object.keys(userVotes).slice(0,3).join(', ')}</div>
-          <div>userVotes mapping for first 3 allNames ids:</div>
-          <pre style={{fontSize:'10px',overflow:'auto',maxHeight:'80px'}}>{JSON.stringify(allNames.slice(0,3).map(n => ({id: n.id, vote: userVotes[n.id]})), null, 2)}</pre>
-          <div>First 3 allNames objects:</div>
-          <pre style={{fontSize:'10px',overflow:'auto',maxHeight:'80px'}}>{JSON.stringify(allNames.slice(0,3), null, 2)}</pre>
-        </div>
         {/* App logo and name at the very top */}
         <div className="flex flex-row items-center justify-center gap-3 mt-2 mb-1">
           <span role="img" aria-label="baby" className="text-4xl align-middle">👶</span>
@@ -96,10 +75,9 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
             return (
               <li key={n.id} className="relative flex items-center py-3 px-2 bg-yellow-50 min-h-[48px]">
                 <span className="absolute left-2 text-yellow-500 font-bold flex items-center gap-1">FAVORITE <span role='img' aria-label='star'>⭐</span></span>
-                <div style={{fontWeight: 'bold', fontSize: 18}}>
+                <span className="mx-auto font-semibold text-lg text-gray-900 text-center w-full">
                   {n.name}
-                  <pre style={{fontSize:'10px',whiteSpace:'pre-wrap',wordBreak:'break-all'}}>{JSON.stringify(n)}</pre>
-                </div>
+                </span>
                 <span className={n.gender === 'boy' ? 'absolute right-2 text-sky-600 flex items-center gap-2' : 'absolute right-2 text-fuchsia-600 flex items-center gap-2'}>
                   {n.gender}
                   {isMatch && <span className="ml-2 text-xs font-bold text-amber-500 bg-amber-100 rounded px-2 py-0.5">match</span>}
@@ -137,10 +115,9 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
             return (
               <li key={n.id} className="relative flex items-center py-3 px-2 bg-green-50 min-h-[48px]">
                 <span className="absolute left-2 text-green-600 font-bold">YES</span>
-                <div style={{fontWeight: 'bold', fontSize: 18}}>
+                <span className="mx-auto font-semibold text-lg text-gray-900 text-center w-full">
                   {n.name}
-                  <pre style={{fontSize:'10px',whiteSpace:'pre-wrap',wordBreak:'break-all'}}>{JSON.stringify(n)}</pre>
-                </div>
+                </span>
                 <span className={n.gender === 'boy' ? 'absolute right-2 text-sky-600 flex items-center gap-2' : 'absolute right-2 text-fuchsia-600 flex items-center gap-2'}>
                   {n.gender}
                   {isMatch && <span className="ml-2 text-xs font-bold text-amber-500 bg-amber-100 rounded px-2 py-0.5">match</span>}
@@ -176,10 +153,9 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
           {pagedRestNames.map(n => (
             <li key={n.id} className="relative flex items-center py-3 px-2 min-h-[48px]">
               <span className="absolute left-2 text-gray-500 font-bold">{userVotes[String(n.id)] === 'no' ? 'NO' : userVotes[String(n.id)] === 'yes' ? 'YES' : userVotes[String(n.id)] === 'favorite' ? 'FAV' : 'UNVOTED'}</span>
-              <div style={{fontWeight: 'bold', fontSize: 18}}>
+              <span className="mx-auto font-semibold text-lg text-gray-900 text-center w-full">
                 {n.name}
-                <pre style={{fontSize:'10px',whiteSpace:'pre-wrap',wordBreak:'break-all'}}>{JSON.stringify(n)}</pre>
-              </div>
+              </span>
               <span className={n.gender === 'boy' ? 'absolute right-2 text-sky-600' : 'absolute right-2 text-fuchsia-600'}>{n.gender}</span>
             </li>
           ))}
