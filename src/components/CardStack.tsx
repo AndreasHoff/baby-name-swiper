@@ -391,7 +391,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
           </ul>
           {/* Paginator for all names */}
           {totalAllPages > 1 && (
-            <div className="flex justify-center items-center gap-2 mb-4">
+            <div className="flex justify-center items-center gap-2 mb-8">
               <button
                 className="px-3 py-1 rounded bg-fuchsia-100 text-fuchsia-700 font-bold disabled:opacity-40"
                 onClick={() => setAllPage(p => Math.max(0, p - 1))}
