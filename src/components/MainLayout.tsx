@@ -10,7 +10,6 @@ interface MainLayoutProps {
   currentUser: string;
   onNameAdded: (name: string, gender: 'boy' | 'girl') => void;
   onLogout: () => void;
-  refreshAllNames?: () => void;
   refreshUserVotes?: () => void;
 }
 
@@ -21,7 +20,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   currentUser, 
   onNameAdded,
   onLogout,
-  refreshAllNames,
   refreshUserVotes
 }) => {
   if (currentView === 'settings') {

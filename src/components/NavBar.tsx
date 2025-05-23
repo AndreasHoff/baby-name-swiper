@@ -8,7 +8,7 @@ interface NavBarProps {
 
 const NavBar: React.FC<NavBarProps> = ({ currentView, setView }) => {
   // Helper for underline style
-  const underlineStyle = (activeColor: string, isActive: boolean) =>
+  const underlineStyle = (isActive: boolean) =>
     isActive
       ? {
           position: 'relative' as const,
@@ -28,7 +28,7 @@ const NavBar: React.FC<NavBarProps> = ({ currentView, setView }) => {
           aria-label="Settings"
           className={`flex-1 flex flex-col items-center justify-center space-y-1 h-14 rounded-none border-none bg-transparent hover:bg-sky-50 active:bg-sky-100 focus:outline-none focus:ring-0 transition-none${currentView === "settings" ? " text-sky-600" : " text-sky-400 hover:text-sky-600"}`}
           onClick={() => handleSetView("settings")}
-          style={underlineStyle('#0ea5e9', currentView === "settings")}
+          style={underlineStyle(currentView === "settings")}
         >
           <FaCog size={20} color={currentView === "settings" ? "#0ea5e9" : undefined} />
           <span className="text-xs font-semibold">Settings</span>
@@ -55,7 +55,7 @@ const NavBar: React.FC<NavBarProps> = ({ currentView, setView }) => {
           aria-label="Swipe Cards"
           className={`flex-1 flex flex-col items-center justify-center space-y-1 h-14 rounded-none border-none bg-transparent hover:bg-fuchsia-50 active:bg-fuchsia-100 focus:outline-none focus:ring-0 transition-none${currentView === "main" ? " text-fuchsia-600" : " text-fuchsia-400 hover:text-fuchsia-600"}`}
           onClick={() => handleSetView("main")}
-          style={underlineStyle('#e879f9', currentView === "main")}
+          style={underlineStyle(currentView === "main")}
         >
           <FaRegIdBadge size={20} color={currentView === "main" ? "#e879f9" : undefined} />
           <span className="text-xs font-semibold">Swipe</span>
@@ -82,7 +82,7 @@ const NavBar: React.FC<NavBarProps> = ({ currentView, setView }) => {
           aria-label="Name Lists"
           className={`flex-1 flex flex-col items-center justify-center space-y-1 h-14 rounded-none border-none bg-transparent hover:bg-amber-50 active:bg-amber-100 focus:outline-none focus:ring-0 transition-none${currentView === "lists" ? " text-amber-600" : " text-amber-400 hover:text-amber-600"}`}
           onClick={() => handleSetView("lists")}
-          style={underlineStyle('#fbbf24', currentView === "lists")}
+          style={underlineStyle(currentView === "lists")}
         >
           <FaRegListAlt size={20} color={currentView === "lists" ? "#fbbf24" : undefined} />
           <span className="text-xs font-semibold">Lists</span>
