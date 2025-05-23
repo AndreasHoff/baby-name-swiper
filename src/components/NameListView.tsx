@@ -29,8 +29,8 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
   console.log('[NameListView] Rendering. allNames:', allNames.length, 'userVotes:', Object.keys(userVotes).length, 'currentUser:', currentUser);
 
   // Partition names by userVotes
-  const favoriteNames = freshNames.filter(n => userVotes[n.id] === 'favorite');
-  const yesNames = freshNames.filter(n => userVotes[n.id] === 'yes');
+  const favoriteNames = freshNames.filter(n => userVotes[String(n.id)] === 'favorite');
+  const yesNames = freshNames.filter(n => userVotes[String(n.id)] === 'yes');
   // For total names, show ALL names from Firestore, not just unvoted
   const totalNamesList = freshNames;
 
@@ -84,7 +84,7 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
       <ul className="divide-y divide-gray-200 bg-white rounded-lg shadow overflow-x-auto mb-4">
         {pagedFavoriteNames.length === 0 && <li className="py-3 px-2 text-center text-gray-400">No favorites yet.</li>}
         {pagedFavoriteNames.map(n => {
-          const isMatch = ['yes', 'favorite'].includes(userVotes[n.id]) && ['yes', 'favorite'].includes(otherUserVotes[n.id]);
+          const isMatch = ['yes', 'favorite'].includes(userVotes[String(n.id)]) && ['yes', 'favorite'].includes(otherUserVotes[String(n.id)]);
           return (
             <li key={n.id} className="relative flex items-center py-3 px-2 bg-yellow-50 min-h-[48px]">
               <span className="absolute left-2 text-yellow-500 font-bold flex items-center gap-1">FAVORITE <span role='img' aria-label='star'>⭐</span></span>
@@ -122,7 +122,7 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
       <ul className="divide-y divide-gray-200 bg-white rounded-lg shadow overflow-x-auto mb-4">
         {pagedYesNames.length === 0 && <li className="py-3 px-2 text-center text-gray-400">No yes yet.</li>}
         {pagedYesNames.map(n => {
-          const isMatch = ['yes', 'favorite'].includes(userVotes[n.id]) && ['yes', 'favorite'].includes(otherUserVotes[n.id]);
+          const isMatch = ['yes', 'favorite'].includes(userVotes[String(n.id)]) && ['yes', 'favorite'].includes(otherUserVotes[String(n.id)]);
           return (
             <li key={n.id} className="relative flex items-center py-3 px-2 bg-green-50 min-h-[48px]">
               <span className="absolute left-2 text-green-600 font-bold">YES</span>
@@ -161,7 +161,7 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
         {pagedRestNames.length === 0 && <li className="py-3 px-2 text-center text-gray-400">No total Names.</li>}
         {pagedRestNames.map(n => (
           <li key={n.id} className="relative flex items-center py-3 px-2 min-h-[48px]">
-            <span className="absolute left-2 text-gray-500 font-bold">{userVotes[n.id] === 'no' ? 'NO' : userVotes[n.id] === 'yes' ? 'YES' : userVotes[n.id] === 'favorite' ? 'FAV' : 'UNVOTED'}</span>
+            <span className="absolute left-2 text-gray-500 font-bold">{userVotes[String(n.id)] === 'no' ? 'NO' : userVotes[String(n.id)] === 'yes' ? 'YES' : userVotes[String(n.id)] === 'favorite' ? 'FAV' : 'UNVOTED'}</span>
             <span className="mx-auto font-semibold text-lg text-center w-full pointer-events-none select-none" style={{position:'relative',zIndex:1}}>{n.name}</span>
             <span className={n.gender === 'boy' ? 'absolute right-2 text-sky-600' : 'absolute right-2 text-fuchsia-600'}>{n.gender}</span>
           </li>
