@@ -1,224 +1,202 @@
+import { doc, updateDoc } from 'firebase/firestore';
 import { AnimatePresence, motion } from 'framer-motion';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { db } from '../firebase';
-import { fetchOtherUserVotes, useFetchNames, useNameStore } from '../store';
+import { SwipeButtons } from './SwipeButtons';
 
 const swipeConfidenceThreshold = 100; // px
 const swipePower = (offset: number, velocity: number) => {
   return Math.abs(offset) * velocity;
 };
 
-export const CardStack: React.FC<{
-  swipeDirection?: 'no' | 'favorite' | 'yes' | null;
-  onAnimationComplete?: () => void;
-  otherUserName?: string;
-}> = ({ swipeDirection, onAnimationComplete, otherUserName }) => {
-  useFetchNames(); // Fetch real names on mount
-  const names = useNameStore((s) => s.names);
-  const vote = useNameStore((s) => s.vote);
-  const otherUserVotes = useNameStore((s) => s.otherUserVotes) || {};
-  const setOtherUserVotes = useNameStore((s) => s.setOtherUserVotes);
-  const currentUser = window.localStorage.getItem('currentUser') as 'Andreas' | 'Emilie' | null;
-  // Only show names where votes[currentUser] !== 'yes'
-  const [deck, setDeck] = useState<string[]>([]);
-  useEffect(() => {
-    // When names or currentUser changes, reset deck to unvoted names (keep order stable)
-    if (!currentUser) return;
-    const unvotedIds = names.filter((n) => {
-      if ((n as any).votes && currentUser) {
-        return (n as any).votes[currentUser] !== 'yes';
-      }
-      return n.voteStatus !== 'yes';
-    }).map(n => n.id);
-    setDeck((prev) => {
-      // Only reset if deck is empty or names changed (not after a 'no' shuffle)
-      if (prev.length === 0 || prev.length !== unvotedIds.length || !prev.every((id, i) => id === unvotedIds[i])) {
-        return unvotedIds;
-      }
-      return prev;
-    });
-  }, [names, currentUser]);
-
+// Accept allNames and userVotes as props
+export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }: { allNames: any[], userVotes: Record<string, string>, currentUser: string, refreshUserVotes?: () => void }) {
+  // Store the actual name objects, not just ids
+  const [deck, setDeck] = useState<any[]>([]);
+  const [shuffleOrder, setShuffleOrder] = useState<string[] | null>(null);
+  const lastNoVotedId = useRef<string | null>(null);
   const dragging = useRef(false);
   const [dragX, setDragX] = useState(0);
   const [animating, setAnimating] = useState<null | 'no' | 'favorite' | 'yes'>(null);
 
+  // Build deck: filter out names with 'yes' or 'favorite' vote
   useEffect(() => {
-    if (otherUserName) {
-      fetchOtherUserVotes(otherUserName).then(setOtherUserVotes);
-    }
-  }, [otherUserName, setOtherUserVotes]);
-
-  // Animation effect when swipeDirection changes
-  useEffect(() => {
-    if (swipeDirection) {
-      setAnimating(swipeDirection);
-      const timeout = setTimeout(() => {
-        setAnimating(null);
-        onAnimationComplete && onAnimationComplete();
-      }, 400);
-      return () => clearTimeout(timeout);
-    }
-  }, [swipeDirection, onAnimationComplete]);
-
-  // Helper to handle voting and match logic
-  const handleVote = async (card: any, direction: 'yes' | 'no' | 'favorite') => {
-    console.log('[handleVote] Voting', card.name, direction);
-    // 1. Save this vote to the user's likedNames field in Firebase
-    const currentUser = window.localStorage.getItem('currentUser') as 'Andreas' | 'Emilie';
-    const otherUser = currentUser === 'Andreas' ? 'Emilie' : 'Andreas';
-    await vote(card.id, direction);
-    if (direction === 'yes' || direction === 'favorite') {
-      // Save to likedNames subfield for the user
-      const userDocRef = (await import('firebase/firestore')).doc(db, 'users', currentUser);
-      await (await import('firebase/firestore')).updateDoc(userDocRef, {
-        [`likedNames.${card.id}`]: true
-      });
-      // No longer set favorite: true on the name document
-      // Use votes map for favorite logic only
-      // To display a star/highlight: card.votes?.[currentUser] === 'favorite'
-      // To display a favorite match: card.votes?.Andreas === 'favorite' && card.votes?.Emilie === 'favorite'
-      // 2. Check if the other user has also swiped yes on this name (only for yes)
-      if (direction === 'yes') {
-        const otherUserDocRef = (await import('firebase/firestore')).doc(db, 'users', otherUser);
-        const otherUserDocSnap = await (await import('firebase/firestore')).getDoc(otherUserDocRef);
-        const otherLikedNames = otherUserDocSnap.exists() && otherUserDocSnap.data().likedNames ? otherUserDocSnap.data().likedNames : {};
-        // Fix: handle both boolean true and string 'true' for legacy/consistency
-        const otherSaidYes = otherLikedNames[card.id] === true || otherLikedNames[card.id] === 'true';
-        if (otherSaidYes) {
-          // Optionally, update isAMatch in Firestore for this name
-          const nameDocRef = (await import('firebase/firestore')).doc(db, 'baby-names', card.id);
-          await (await import('firebase/firestore')).updateDoc(nameDocRef, { isAMatch: true });
-          return;
-        }
+    if (!currentUser) return;
+    const unvoted = allNames.filter((n) => {
+      const vote = userVotes?.[n.id];
+      const include = vote !== 'yes' && vote !== 'favorite';
+      if (!include) console.log('[CardStack] Filtering out name:', n.name, 'vote:', vote);
+      return include;
+    });
+    console.log('[CardStack] Deck filtered, count:', unvoted.length);
+    // If we just voted 'no', move that card to the back if still present
+    if (lastNoVotedId.current && unvoted.some((n) => n.id === lastNoVotedId.current)) {
+      const filtered = unvoted.filter((n) => n.id !== lastNoVotedId.current);
+      const card = unvoted.find((n) => n.id === lastNoVotedId.current);
+      lastNoVotedId.current = null;
+      const newDeck = card ? [...filtered, card] : filtered;
+      if (shuffleOrder && arraysEqual(shuffleOrder, newDeck.map(n => n.id))) {
+        setDeck(applyOrder(newDeck, shuffleOrder));
+      } else {
+        setShuffleOrder(null);
+        setDeck(newDeck);
       }
-    } else if (direction === 'no') {
-      // Only shuffle this card back into the deck at a random position (not the rest)
-      setDeck((prev) => {
-        // Remove the card from the top (if present)
-        const idx = prev.indexOf(card.id);
-        if (idx === -1) return prev;
-        const newDeck = [...prev];
-        newDeck.splice(idx, 1);
-        // Insert at random position except the top (so user doesn't see it again immediately)
-        const insertAt = newDeck.length > 0 ? Math.floor(Math.random() * newDeck.length) + 1 : 0;
-        newDeck.splice(insertAt, 0, card.id);
-        return newDeck;
-      });
-      // Remove the card from the top immediately so the next card is shown
-      setDeck((prev) => {
-        if (prev[0] === card.id) {
-          return prev.slice(1);
-        }
-        return prev;
-      });
+    } else {
+      if (shuffleOrder && arraysEqual(shuffleOrder, unvoted.map(n => n.id))) {
+        setDeck(applyOrder(unvoted, shuffleOrder));
+      } else {
+        setShuffleOrder(null);
+        setDeck(unvoted);
+      }
     }
-    // If not a match, animate away
+  }, [allNames, userVotes, currentUser]);
+
+  // Shuffle function (persistent)
+  const shuffleDeck = () => {
+    console.log('[CardStack] Shuffle button clicked');
+    setDeck((prev) => {
+      const arr = [...prev];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      setShuffleOrder(arr.map(n => n.id));
+      console.log('[CardStack] Deck shuffled:', arr.map(n => n.name));
+      return arr;
+    });
+  };
+
+  // Voting logic: update only the user's votes map in Firestore
+  const handleVote = async (direction: 'yes' | 'no' | 'favorite') => {
+    const card = deck[0];
+    if (!card) return;
+    console.log('[CardStack] User voted', direction, 'for', card.name, card.id);
+    if (direction === 'no') {
+      lastNoVotedId.current = card.id;
+      setDeck((prev) => {
+        const rest = prev.slice(1);
+        console.log('[CardStack] Moving card to back of deck:', card.name);
+        return [...rest, card];
+      });
+    } else {
+      setDeck((prev) => prev.slice(1));
+      console.log('[CardStack] Removing card from deck:', card.name);
+    }
     setAnimating(direction);
+    try {
+      const userRef = doc(db, 'users', currentUser);
+      await updateDoc(userRef, { [`votes.${card.id}`]: direction });
+      if (refreshUserVotes) {
+        refreshUserVotes();
+      }
+      console.log('[CardStack] Firestore updated for', card.name, 'with', direction);
+    } catch (e) {
+      console.error('[CardStack] Firestore update failed:', e);
+    }
     setTimeout(() => {
       setAnimating(null);
-      onAnimationComplete && onAnimationComplete();
     }, 400);
   };
 
-  if (names.length > 0 && deck.length === 0) {
-    return <div className="text-center text-xl mt-8 text-fuchsia-700">No more names to swipe!</div>;
+  // Helper: check if two arrays of ids are equal (order matters)
+  function arraysEqual(a: string[], b: string[]) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
   }
-  if (deck.length === 0) {
-    return null;
+  // Helper: apply an order of ids to an array of name objects
+  function applyOrder(arr: any[], order: string[]) {
+    const map = Object.fromEntries(arr.map(n => [n.id, n]));
+    return order.map(id => map[id]).filter(Boolean);
   }
+
   // Show a visible stack of up to 5 cards
-  const stack = deck.slice(0, 5)
-    .map(id => names.find(n => n.id === id))
-    .filter((n): n is typeof names[0] => Boolean(n));
-  // Animation variants for feedback
+  const stack = deck.slice(0, 5);
   const animationVariants = {
     yes: { x: [0, 30, 0], boxShadow: '0 8px 24px 0 rgba(34,197,94,0.18)' },
     no: { x: [0, -30, 0], boxShadow: '0 8px 24px 0 rgba(239,68,68,0.18)' },
     favorite: { scale: [1, 1.1, 1], boxShadow: '0 8px 24px 0 rgba(253,224,71,0.18)' },
     none: {},
   };
+
   return (
-    <div className="flex flex-col items-center justify-center w-[430px] max-w-full px-4 md:px-8 relative mb-5" style={{flex: '0 0 auto', minHeight: 330}}>
-      <AnimatePresence>
-        {stack.map((card, i) => {
-          // Custom top offsets for each card in the stack
-          let topPx = 0;
-          if (i === 1) topPx = 4;
-          else if (i === 2) topPx = 8;
-          else if (i === 3) topPx = 12;
-          else if (i === 4) topPx = 16;
-          // Set zIndex so the top card is always on top, next card below, etc.
-          const zIndex = stack.length - i;
-          const isTop = i === 0;
-          // Choose transition: use tween for feedback animation, spring otherwise
-          const transition = isTop && animating
-            ? { type: 'tween', duration: 0.35, ease: 'easeInOut' }
-            : { type: 'spring', stiffness: 200, damping: 20 };
-          return (
-            <motion.div
-              key={card.id}
-              initial={{ y: 40, opacity: 0, scale: 1 }}
-              animate={{
-                y: 0,
-                opacity: 1,
-                scale: 1,
-                ...(isTop && animating ? animationVariants[animating] : {})
-              }}
-              exit={{ y: -40, opacity: 0, scale: 1 }}
-              transition={transition}
-              drag={isTop ? "x" : false}
-              dragConstraints={isTop ? { left: 0, right: 0 } : undefined}
-              dragElastic={isTop ? 0.8 : undefined}
-              onDragStart={isTop ? () => (dragging.current = true) : undefined}
-              onDragEnd={isTop ? (async (_, info) => {
-                dragging.current = false;
-                setDragX(0);
-                const { offset, velocity } = info;
-                const swipe = swipePower(offset.x, velocity.x);
-                if (swipe < -swipeConfidenceThreshold) {
-                  await handleVote(card, 'no');
-                } else if (swipe > swipeConfidenceThreshold) {
-                  await handleVote(card, 'yes');
-                }
-              }) : undefined}
-              onDrag={isTop ? ((_, info) => setDragX(info.offset.x)) : undefined}
-              className={`cardstack-card bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200 text-fuchsia-900 rounded-3xl shadow-2xl px-4 py-5 w-[225px] min-h-[93px] flex flex-col items-center justify-center border-4 border-white select-none absolute left-0 right-0 mx-auto pointer-events-none` + (isTop ? ' pointer-events-auto' : '')}
-              style={{ top: topPx, zIndex, boxShadow: `0 ${4 + i * 2}px ${16 - i * 2}px 0 rgba(0,0,0,0.10)` }}
-              whileTap={isTop ? { scale: 0.97 } : undefined}
-              whileDrag={isTop ? { rotate: dragX / 30 } : undefined}
-            >
-              <span className="text-5xl font-extrabold mb-4 drop-shadow-lg">{card.name}</span>
-              <span className="text-lg font-semibold uppercase tracking-widest px-4 py-2 rounded-full bg-white bg-opacity-40 mt-4 shadow text-fuchsia-700 border border-fuchsia-200">
-                {card.gender}
-              </span>
-              {isTop && (
-                <>
-                  {/* Overlay for swipe direction */}
-                  <div
-                    className={`absolute inset-0 rounded-3xl pointer-events-none transition-opacity duration-200 ${
-                      dragX < -40
-                        ? 'bg-red-400/50 opacity-100'
-                        : dragX > 40
-                        ? 'bg-green-400/50 opacity-100'
-                        : 'opacity-0'
-                    }`}
-                  />
-                  {/* Removed swipe icon from card */}
-                </>
-              )}
-              {isTop && (
-                <div className="mt-4 text-center w-full">
-                  {/* Only show other user's vote if present */}
-                  {otherUserVotes[card.id] && (
-                    <div className="text-sky-700 font-semibold text-base">{otherUserName} {otherUserVotes[card.id] === 'yes' ? 'liked' : otherUserVotes[card.id] === 'no' ? 'disliked' : 'absolutely did NOT like'} this</div>
-                  )}
-                </div>
-              )}
-            </motion.div>
-          );
-        })}
-      </AnimatePresence>
+    <div className="w-full">      {/* 1st Row: Headline */}
+      <div className="flex justify-center mb-4 px-4">
+        <h1 className="text-3xl sm:text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-fuchsia-400 to-amber-400 drop-shadow-lg text-center flex items-center justify-center gap-2" style={{letterSpacing: '0.01em'}}>
+          <span role="img" aria-label="baby" className="text-4xl sm:text-xl align-middle text-black bg-none" style={{color: '#222', background: 'none'}}>👶</span>
+          <span className="leading-tight">Baby Name Swiper</span>
+        </h1>
+      </div>      {/* 2nd Row: Card Stack */}
+      <div className="flex justify-center mb-4 relative px-4" style={{ minHeight: '300px' }}>
+        <AnimatePresence>
+          {stack.map((card, i) => {
+            let topPx = 0;
+            if (i === 1) topPx = 4;
+            else if (i === 2) topPx = 8;
+            else if (i === 3) topPx = 12;
+            else if (i === 4) topPx = 16;
+            const zIndex = stack.length - i;
+            const isTop = i === 0;
+            const transition = isTop && animating
+              ? { type: 'tween', duration: 0.35, ease: 'easeInOut' }
+              : { type: 'spring', stiffness: 200, damping: 20 };
+            return (
+              <motion.div
+                key={card.id}
+                initial={{ y: 40, opacity: 0, scale: 1 }}
+                animate={{
+                  y: 0,
+                  opacity: 1,
+                  scale: 1,
+                  ...(isTop && animating ? animationVariants[animating] : {})
+                }}
+                exit={{ y: -40, opacity: 0, scale: 1 }}
+                transition={transition}
+                drag={isTop ? "x" : false}
+                dragConstraints={isTop ? { left: 0, right: 0 } : undefined}
+                dragElastic={isTop ? 0.8 : undefined}
+                onDragStart={isTop ? () => (dragging.current = true) : undefined}
+                onDragEnd={isTop ? (async (_, info) => {
+                  dragging.current = false;
+                  setDragX(0);
+                  const { offset, velocity } = info;
+                  const swipe = swipePower(offset.x, velocity.x);
+                  if (swipe < -swipeConfidenceThreshold) {
+                    await handleVote('no');
+                  } else if (swipe > swipeConfidenceThreshold) {
+                    await handleVote('yes');
+                  }
+                }) : undefined}                onDrag={isTop ? ((_, info) => setDragX(info.offset.x)) : undefined}
+                className={`cardstack-card bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200 text-fuchsia-900 rounded-3xl shadow-2xl px-4 py-5 w-full min-h-[90px] flex flex-col items-center justify-center border-4 border-white select-none absolute left-0 right-0 mx-auto pointer-events-none` + (isTop ? ' pointer-events-auto' : '')}
+                style={{ top: topPx, zIndex, boxShadow: `0 ${4 + i * 2}px ${16 - i * 2}px 0 rgba(0,0,0,0.10)` }}
+                whileTap={isTop ? { scale: 0.97 } : undefined}
+                whileDrag={isTop ? { rotate: dragX / 30 } : undefined}              >                <span className="text-4xl sm:text-5xl font-extrabold mb-3 sm:mb-4 drop-shadow-lg text-center">{card.name}</span>
+                <span className="text-base sm:text-lg font-semibold uppercase tracking-widest px-4 py-2 rounded-full bg-white bg-opacity-40 mt-3 sm:mt-4 shadow text-fuchsia-700 border border-fuchsia-200">
+                  {card.gender}
+                </span>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </div>      {/* 3rd Row: Shuffle Button */}
+      {deck.length > 1 && (
+        <div className="flex justify-center mb-4">
+          <button
+            className="px-4 py-2 sm:px-6 sm:py-2 rounded-lg bg-gradient-to-br from-amber-300 to-fuchsia-300 text-fuchsia-900 font-bold shadow hover:from-amber-400 hover:to-fuchsia-400 transition-all duration-200 text-sm sm:text-base"
+            onClick={shuffleDeck}
+          >
+            Shuffle
+          </button>
+        </div>
+      )}{/* 4th Row: Voting Buttons - 3 Columns */}
+      <div className="flex justify-center gap-6 sm:gap-8 mb-4 px-4">
+        <SwipeButtons
+          currentUser={currentUser === 'Andreas' || currentUser === 'Emilie' ? currentUser : null}
+          top={deck[0]}
+          onVote={handleVote}
+          disabled={!deck.length}
+        />
+      </div>
     </div>
   );
-};
+}

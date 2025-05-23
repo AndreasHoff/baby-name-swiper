@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import type { Gender } from '../store';
-import { useNameStore } from '../store';
+
+// Define Gender type locally since store.ts is obsolete
+export type Gender = 'boy' | 'girl';
 
 // GenderRadioGroup component
 const GenderRadioGroup: React.FC<{
@@ -14,9 +15,6 @@ const GenderRadioGroup: React.FC<{
     <label className="flex items-center gap-1 text-sky-600 font-semibold">
       <input type="radio" name="gender" value="girl" checked={gender === 'girl'} onChange={() => setGender('girl')} className="accent-fuchsia-500" /> Girl
     </label>
-    <label className="flex items-center gap-1 text-amber-600 font-semibold">
-      <input type="radio" name="gender" value="unisex" checked={gender === 'unisex'} onChange={() => setGender('unisex')} className="accent-amber-500" /> Unisex
-    </label>
   </div>
 );
 
@@ -29,7 +27,7 @@ const NameInput: React.FC<{
     className="border-2 border-fuchsia-400 rounded-lg px-3 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-sky-400 bg-gradient-to-r from-sky-100 via-fuchsia-50 to-amber-100 shadow w-full placeholder-fuchsia-300"
     placeholder="Add custom name..."
     value={name}
-    onChange={e => setName(e.target.value)}
+    onChange={e => { setName(e.target.value); console.log('[NameForm] Name input changed:', e.target.value); }}
     required
   />
 );
@@ -38,14 +36,16 @@ export const NameForm: React.FC<{ onNameAdded?: (name?: string) => void }> = ({ 
   const [name, setName] = useState('');
   const [gender, setGender] = useState<Gender>('boy');
   const [error, setError] = useState<string | null>(null);
-  const addName = useNameStore((s) => s.addName);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[NameForm] Form submitted:', name, gender);
     setError(null);
     if (!name.trim()) return;
     try {
-      await addName(name.trim(), gender);
+      // Firestore action to add name
+      // await firestoreAddNameAction(name.trim(), gender);
+      
       if (onNameAdded) onNameAdded(name.trim());
       setName('');
     } catch (err: any) {

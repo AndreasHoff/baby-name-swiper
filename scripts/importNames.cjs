@@ -23,7 +23,8 @@ async function main() {
   let added = 0, skipped = 0;
   for (const entry of names) {
     const name = entry.name.trim();
-    const gender = entry.gender || 'unisex';
+    // Only allow 'boy' or 'girl' as gender
+    const gender = (entry.gender === 'boy' || entry.gender === 'girl') ? entry.gender : 'boy';
     // Check for duplicate (case-insensitive)
     const snap = await db.collection('baby-names').where('name', '==', name).get();
     if (!snap.empty) {

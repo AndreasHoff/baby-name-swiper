@@ -15,6 +15,10 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+#root{
+  width: 100%;
+}
+
 a {
   font-weight: 500;
   color: #646cff;
@@ -56,6 +60,10 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
+nav {
+  border-radius: 0 !important;
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
@@ -86,7 +94,7 @@ button:focus-visible {
     padding-left: 0.5rem !important;
     padding-right: 0.5rem !important;
     box-sizing: border-box;
-    height: 25vh !important;
+    height: 250px;
   }
   .cardstack-buttons,
   .cardstack-form,
