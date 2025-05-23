@@ -88,7 +88,7 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
           return (
             <li key={n.id} className="relative flex items-center py-3 px-2 bg-yellow-50 min-h-[48px]">
               <span className="absolute left-2 text-yellow-500 font-bold flex items-center gap-1">FAVORITE <span role='img' aria-label='star'>⭐</span></span>
-              <span className="mx-auto font-semibold text-lg text-center w-full pointer-events-none select-none" style={{position:'relative',zIndex:1}}>
+              <span className="mx-auto font-semibold text-lg text-center w-full">
                 {n.name}
                 <pre style={{fontSize:'10px',whiteSpace:'pre-wrap',wordBreak:'break-all'}}>{JSON.stringify(n)}</pre>
               </span>
@@ -129,7 +129,7 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
           return (
             <li key={n.id} className="relative flex items-center py-3 px-2 bg-green-50 min-h-[48px]">
               <span className="absolute left-2 text-green-600 font-bold">YES</span>
-              <span className="mx-auto font-semibold text-lg text-center w-full pointer-events-none select-none" style={{position:'relative',zIndex:1}}>
+              <span className="mx-auto font-semibold text-lg text-center w-full">
                 {n.name}
                 <pre style={{fontSize:'10px',whiteSpace:'pre-wrap',wordBreak:'break-all'}}>{JSON.stringify(n)}</pre>
               </span>
@@ -168,7 +168,7 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
         {pagedRestNames.map(n => (
           <li key={n.id} className="relative flex items-center py-3 px-2 min-h-[48px]">
             <span className="absolute left-2 text-gray-500 font-bold">{userVotes[String(n.id)] === 'no' ? 'NO' : userVotes[String(n.id)] === 'yes' ? 'YES' : userVotes[String(n.id)] === 'favorite' ? 'FAV' : 'UNVOTED'}</span>
-            <span className="mx-auto font-semibold text-lg text-center w-full pointer-events-none select-none" style={{position:'relative',zIndex:1}}>
+            <span className="mx-auto font-semibold text-lg text-center w-full">
               {n.name}
               <pre style={{fontSize:'10px',whiteSpace:'pre-wrap',wordBreak:'break-all'}}>{JSON.stringify(n)}</pre>
             </span>
