@@ -34,6 +34,7 @@ function App() {
   const [lastAddedName, setLastAddedName] = useState('');
   const [showAddError, setShowAddError] = useState(false);
   const [addErrorName, setAddErrorName] = useState('');
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
     const savedUser = window.localStorage.getItem('currentUser') as 'Andreas' | 'Emilie' | null;
@@ -81,9 +82,10 @@ function App() {
   }, [currentUser]);
 
   const handleUserSelect = (user: 'Andreas' | 'Emilie') => {
-    console.log('[App] User selected:', user);
     setCurrentUser(user);
     window.localStorage.setItem('currentUser', user);
+    setShowWelcome(true);
+    setTimeout(() => setShowWelcome(false), 4000); // match 4s animation
   };
 
   const handleLogout = () => {
@@ -144,6 +146,28 @@ function App() {
           </div>
         </div>
       </CenteredScreen>
+    );
+  }
+
+  // Show animated welcome message for 2s after login
+  if (showWelcome && currentUser) {
+    return (
+      <div className="flex flex-col min-h-screen w-full bg-gradient-to-br from-fuchsia-100 via-amber-100 to-sky-100 items-center justify-center">
+        <h1
+          className="text-4xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-fuchsia-400 to-amber-400 drop-shadow-lg text-center animate-fadeinout"
+          style={{
+            letterSpacing: '0.01em',
+            transition: 'opacity 1s cubic-bezier(0.4,0,0.2,1)',
+            opacity: showWelcome ? 1 : 0
+          }}
+        >
+          Welcome {currentUser === 'Emilie' ? (
+            <span>
+              MilleMus <span role="img" aria-label="heart" className="inline-block align-middle text-pink-400" style={{ position: 'relative', top: '-10px', left: '-15px' }}>❤️</span>
+            </span>
+          ) : 'Andreas'}
+        </h1>
+      </div>
     );
   }
 

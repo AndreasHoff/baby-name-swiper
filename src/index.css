@@ -111,3 +111,13 @@ nav {
     box-sizing: border-box;
   }
 }
+
+@keyframes fadeinout {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.animate-fadeinout {
+  animation: fadeinout 4s cubic-bezier(0.4,0,0.2,1) 1;
+}
