@@ -68,6 +68,8 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
         <div>userVotes: {Object.keys(userVotes).length}</div>
         <div>First 3 allNames: {Array.isArray(allNames) ? allNames.slice(0,3).map(n => n.name).join(', ') : 'N/A'}</div>
         <div>First 3 freshNames: {Array.isArray(freshNames) ? freshNames.slice(0,3).map(n => n.name).join(', ') : 'N/A'}</div>
+        <div>First 3 allNames objects:</div>
+        <pre style={{fontSize:'10px',overflow:'auto',maxHeight:'80px'}}>{JSON.stringify(allNames.slice(0,3), null, 2)}</pre>
       </div>
       {/* App logo and name at the very top */}
       <div className="flex flex-row items-center justify-center gap-3 mt-2 mb-1">

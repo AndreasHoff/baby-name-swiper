@@ -54,9 +54,11 @@ function App() {
         ...doc.data(),
       })) as Name[];
       setAllNames(fetchedNames);
-      console.log('[App] Names fetched:', fetchedNames.length);
+      console.log('[App] Names fetched:', fetchedNames.length, fetchedNames.slice(0,3));
     } catch (error) {
       console.error('[App] Error fetching names:', error);
+      // Show error in UI for debugging mobile
+      alert('Error fetching names: ' + (error instanceof Error ? error.message : String(error)));
     }
   };
 
