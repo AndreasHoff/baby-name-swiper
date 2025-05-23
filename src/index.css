@@ -77,6 +77,12 @@ nav {
   }
 }
 
+.modal-container{
+  margin: 0 1.5rem;
+  max-height: 80%;
+  padding-top: 0.5rem;
+}
+
 @media screen and (max-width: 430px) {
   body {
     width: 100vw !important;

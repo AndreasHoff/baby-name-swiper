@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, getDoc, getDocs } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import './App.css';
 import { MainLayout } from './components/MainLayout';
@@ -32,6 +32,8 @@ function App() {
   const [userVotes, setUserVotes] = useState<Record<string, string>>({});
   const [showAddSuccess, setShowAddSuccess] = useState(false);
   const [lastAddedName, setLastAddedName] = useState('');
+  const [showAddError, setShowAddError] = useState(false);
+  const [addErrorName, setAddErrorName] = useState('');
 
   useEffect(() => {
     const savedUser = window.localStorage.getItem('currentUser') as 'Andreas' | 'Emilie' | null;
@@ -94,6 +96,15 @@ function App() {
   const handleNameAdded = async (name: string, gender: 'boy' | 'girl') => {
     console.log('[App] Adding name:', name, gender);
     try {
+      // Check for duplicate name (case-insensitive)
+      const q = query(collection(db, 'baby-names'), where('name', '==', name));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        setAddErrorName(name);
+        setShowAddError(true);
+        setTimeout(() => setShowAddError(false), 2000);
+        return;
+      }
       const docRef = await addDoc(collection(db, 'baby-names'), {
         name: name,
         gender: gender,
@@ -159,6 +170,25 @@ function App() {
         >
           <span className="mr-2 text-xl">🎉</span>
           <span className="mx-1 text-fuchsia-700">{lastAddedName}</span> added successfully
+        </div>
+      </div>
+
+      {/* Error notification for duplicate name */}
+      <div className="fixed top-0 left-0 w-full flex justify-center z-50 pointer-events-none">
+        <div
+          className="px-6 py-3 rounded-2xl shadow-xl font-bold text-base flex items-center justify-center text-red-700 drop-shadow-lg text-center transition-all duration-500"
+          style={{
+            maxWidth: 420,
+            minWidth: 220,
+            background: 'linear-gradient(135deg, #fee2e2 0%, #fca5a5 60%, #fef3c7 100%)',
+            border: 'none',
+            boxShadow: '0 8px 24px 0 rgba(239, 68, 68, 0.10)',
+            transform: showAddError ? 'translateY(0)' : 'translateY(-150%)',
+            opacity: showAddError ? 1 : 0
+          }}
+        >
+          <span className="mr-2 text-xl">❗</span>
+          <span className="mx-1 text-red-700">{addErrorName}</span> already exists
         </div>
       </div>
 

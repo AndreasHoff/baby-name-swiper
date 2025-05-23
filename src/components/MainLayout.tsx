@@ -34,6 +34,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             Log out
           </button>
         </div>
+        <div className="w-full max-w-[430px] mx-auto mt-8 px-0">
+          <AddBabyName onNameAdded={onNameAdded} />
+        </div>
       </div>
     );
   }
@@ -52,9 +55,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   return (
     <div className="w-full max-w-[430px] mx-auto px-0">
       <CardStack allNames={allNames} userVotes={userVotes} currentUser={currentUser} refreshUserVotes={refreshUserVotes} />
-      <div className="mt-6 w-full px-0">
-        <AddBabyName onNameAdded={onNameAdded} />
-      </div>
     </div>
   );
 };

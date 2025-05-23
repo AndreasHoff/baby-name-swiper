@@ -19,7 +19,6 @@ export const SwipeButtons: React.FC<{
           boxShadow: disabled ? undefined : '0 8px 24px 0 rgba(239, 68, 68, 0.25), 0 2px 8px 0 rgba(236, 72, 153, 0.15)'
         }}
       >
-        <span className="flex items-center justify-center w-full h-full">❌</span>
       </button>
       
       {/* Favorite Button - Larger and special */}
@@ -47,7 +46,6 @@ export const SwipeButtons: React.FC<{
           boxShadow: disabled ? undefined : '0 8px 24px 0 rgba(74, 222, 128, 0.25), 0 2px 8px 0 rgba(16, 185, 129, 0.15)'
         }}
       >
-        <span className="flex items-center justify-center w-full h-full">✅</span>
       </button>
     </div>
   );

@@ -1,6 +1,7 @@
 import { doc, updateDoc } from 'firebase/firestore';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
+import Modal from 'react-modal';
 import { db } from '../firebase';
 import { SwipeButtons } from './SwipeButtons';
 
@@ -18,6 +19,12 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
   const dragging = useRef(false);
   const [dragX, setDragX] = useState(0);
   const [animating, setAnimating] = useState<null | 'no' | 'favorite' | 'yes'>(null);
+  // Only show names left in the deck in the modal
+  const [showAllModal, setShowAllModal] = useState(false);
+  const [allPage, setAllPage] = useState(0);
+  const allPageSize = 10;
+  const totalAllPages = Math.ceil(deck.length / allPageSize);
+  const pagedAllNames = deck.slice(allPage * allPageSize, (allPage + 1) * allPageSize);
 
   // Build deck: filter out names with 'yes' or 'favorite' vote
   useEffect(() => {
@@ -50,21 +57,6 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
       }
     }
   }, [allNames, userVotes, currentUser]);
-
-  // Shuffle function (persistent)
-  const shuffleDeck = () => {
-    console.log('[CardStack] Shuffle button clicked');
-    setDeck((prev) => {
-      const arr = [...prev];
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-      setShuffleOrder(arr.map(n => n.id));
-      console.log('[CardStack] Deck shuffled:', arr.map(n => n.name));
-      return arr;
-    });
-  };
 
   // Voting logic: update only the user's votes map in Firestore
   const handleVote = async (direction: 'yes' | 'no' | 'favorite') => {
@@ -119,15 +111,22 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
     none: {},
   };
 
+  // If there are no cards left, don't render the card stack division at all
+  if (deck.length === 0) {
+    return null;
+  }
+
   return (
-    <div className="w-full">      {/* 1st Row: Headline */}
+    <div className="w-full">
+      {/* 1st Row: Headline */}
       <div className="flex justify-center mb-4 px-4">
         <h1 className="text-3xl sm:text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-fuchsia-400 to-amber-400 drop-shadow-lg text-center flex items-center justify-center gap-2" style={{letterSpacing: '0.01em'}}>
           <span role="img" aria-label="baby" className="text-4xl sm:text-xl align-middle text-black bg-none" style={{color: '#222', background: 'none'}}>👶</span>
           <span className="leading-tight">Baby Name Swiper</span>
         </h1>
-      </div>      {/* 2nd Row: Card Stack */}
-      <div className="flex justify-center mb-4 relative px-4" style={{ minHeight: '300px' }}>
+      </div>
+      {/* 2nd Row: Card Stack */}
+      <div className="flex justify-center relative px-4" style={{ minHeight: '300px' }}>
         <AnimatePresence>
           {stack.map((card, i) => {
             let topPx = 0;
@@ -178,17 +177,68 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
             );
           })}
         </AnimatePresence>
-      </div>      {/* 3rd Row: Shuffle Button */}
-      {deck.length > 1 && (
-        <div className="flex justify-center mb-4">
-          <button
-            className="px-4 py-2 sm:px-6 sm:py-2 rounded-lg bg-gradient-to-br from-amber-300 to-fuchsia-300 text-fuchsia-900 font-bold shadow hover:from-amber-400 hover:to-fuchsia-400 transition-all duration-200 text-sm sm:text-base"
-            onClick={shuffleDeck}
-          >
-            Shuffle
-          </button>
+      </div>
+      {/* Deck count paragraph */}
+      <p className="text-center text-fuchsia-700 font-semibold mb-2">{deck.length} name{deck.length !== 1 ? 's' : ''} left</p>
+      {/* 3rd Row: Show All Names Button */}
+      <div className="flex justify-center mb-4">
+        <button
+          className="px-4 py-2 sm:px-6 sm:py-2 rounded-lg bg-gradient-to-br from-amber-300 to-fuchsia-300 text-fuchsia-900 font-bold shadow hover:from-amber-400 hover:to-fuchsia-400 transition-all duration-200 text-sm sm:text-base"
+          onClick={() => setShowAllModal(true)}
+        >
+          Show all names
+        </button>
+      </div>
+      {/* Modal for all names */}
+      <Modal
+        isOpen={showAllModal}
+        onRequestClose={() => setShowAllModal(false)}
+        contentLabel="All Names"
+        ariaHideApp={false}
+        className="fixed inset-0 flex items-center justify-center z-50"
+        overlayClassName="fixed inset-0 bg-black bg-opacity-40 z-40"
+      >
+        <div className="modal-container bg-white rounded-2xl shadow-2xl p-6 max-w-lg w-full relative">
+          <h2 className="text-xl font-bold text-center mb-4 text-fuchsia-700">Names Left</h2>
+          <ul className="divide-y divide-gray-200 max-h-96 overflow-y-auto mb-4">
+            {pagedAllNames.map(n => (
+              <li key={n.id} className="py-2 px-2 flex items-center justify-between">
+                <span className="font-semibold text-lg">{n.name}</span>
+                <span className={n.gender === 'boy' ? 'text-sky-600' : 'text-fuchsia-600'}>{n.gender}</span>
+              </li>
+            ))}
+          </ul>
+          {/* Paginator for all names */}
+          {totalAllPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mb-4">
+              <button
+                className="px-3 py-1 rounded bg-fuchsia-100 text-fuchsia-700 font-bold disabled:opacity-40"
+                onClick={() => setAllPage(p => Math.max(0, p - 1))}
+                disabled={allPage === 0}
+              >
+                Prev
+              </button>
+              <span className="text-sm font-semibold text-gray-600">Page {allPage + 1} of {totalAllPages}</span>
+              <button
+                className="px-3 py-1 rounded bg-fuchsia-100 text-fuchsia-700 font-bold disabled:opacity-40"
+                onClick={() => setAllPage(p => Math.min(totalAllPages - 1, p + 1))}
+                disabled={allPage === totalAllPages - 1}
+              >
+                Next
+              </button>
+            </div>
+          )}
+          <div className="flex justify-center">
+            <button
+              className="px-6 py-2 rounded-lg bg-gradient-to-br from-fuchsia-400 to-amber-400 text-white font-bold shadow hover:from-fuchsia-500 hover:to-amber-500 transition-all duration-200"
+              onClick={() => setShowAllModal(false)}
+            >
+              Close
+            </button>
+          </div>
         </div>
-      )}{/* 4th Row: Voting Buttons - 3 Columns */}
+      </Modal>
+      {/* 4th Row: Voting Buttons - 3 Columns */}
       <div className="flex justify-center gap-6 sm:gap-8 mb-4 px-4">
         <SwipeButtons
           currentUser={currentUser === 'Andreas' || currentUser === 'Emilie' ? currentUser : null}
