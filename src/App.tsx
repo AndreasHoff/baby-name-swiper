@@ -173,13 +173,6 @@ function App() {
           onLogout={handleLogout}
           refreshAllNames={fetchAllNames}
           refreshUserVotes={fetchUserVotes}
-          loggingProps={{
-            handleUserSelect,
-            handleLogout,
-            handleNameAdded,
-            fetchAllNames,
-            fetchUserVotes
-          }}
         />
       </div>
     </div>
