@@ -25,6 +25,8 @@ export function CardStack({ allNames, userVotes, otherUserVotes, currentUser, re
   const totalAllPages = Math.ceil(deck.length / allPageSize);
   const pagedAllNames = deck.slice(allPage * allPageSize, (allPage + 1) * allPageSize);
   const [matchModal, setMatchModal] = useState<{ open: boolean, name: string | null }>({ open: false, name: null });
+  // Track the last match type for modal styling
+  const [lastMatchType, setLastMatchType] = useState<'yes' | 'favorite' | null>(null);
 
   // Build deck: filter out names with 'yes' or 'favorite' vote
   useEffect(() => {
@@ -114,15 +116,16 @@ export function CardStack({ allNames, userVotes, otherUserVotes, currentUser, re
       if (refreshUserVotes) {
         refreshUserVotes();
       }
+      // Show match modal if a match is detected after this vote
+      if (['yes', 'favorite'].includes(direction) && isAMatch) {
+        setLastMatchType(direction === 'yes' ? 'yes' : 'favorite');
+        setTimeout(() => {
+          setMatchModal({ open: true, name: card.name });
+        }, 500);
+      }
       console.log('[CardStack] Firestore updated for', card.name, 'with', direction);
     } catch (e) {
       console.error('[CardStack] Firestore update failed:', e);
-    }
-    // After voting, check for match
-    if (['yes', 'favorite'].includes(direction) && isMatch(card.id)) {
-      setTimeout(() => {
-        setMatchModal({ open: true, name: card.name });
-      }, 500); // Show after animation
     }
     // After updating the deck, log the current deck order (names only)
     setTimeout(() => {
@@ -167,25 +170,102 @@ export function CardStack({ allNames, userVotes, otherUserVotes, currentUser, re
   return (
     <div className="w-full">
       {/* Match Modal */}
-      <Modal
-        isOpen={matchModal.open}
-        onRequestClose={() => setMatchModal({ open: false, name: null })}
-        contentLabel="Match!"
-        ariaHideApp={false}
-        className="fixed inset-0 flex items-center justify-center z-50"
-        overlayClassName="fixed inset-0 bg-black bg-opacity-40 z-40"
-      >
-        <div className="modal-container bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full flex flex-col items-center">
-          <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-fuchsia-400 to-sky-400 drop-shadow mb-4">Match! 🎉</h2>
-          <div className="text-2xl font-bold text-fuchsia-700 mb-2">{matchModal.name}</div>
-          <button
-            className="mt-6 px-6 py-2 rounded-lg bg-gradient-to-br from-fuchsia-400 to-amber-400 text-white font-bold shadow hover:from-fuchsia-500 hover:to-amber-500 transition-all duration-200"
-            onClick={() => setMatchModal({ open: false, name: null })}
+      {matchModal.open && (
+        <>
+          {/* Celebration emojis outside modal */}
+          <div className="fixed inset-0 flex items-center justify-center z-40 pointer-events-none select-none">
+            <span style={{
+              fontSize: '4rem',
+              position: 'absolute',
+              left: '10%',
+              top: '15%',
+              filter: 'drop-shadow(0 0 10px #fde04788)'
+            }}>🎆</span>
+            <span style={{
+              fontSize: '3.5rem',
+              position: 'absolute',
+              right: '12%',
+              top: '20%',
+              filter: 'drop-shadow(0 0 8px #fde04766)'
+            }}>🎉</span>
+            <span style={{
+              fontSize: '3.5rem',
+              position: 'absolute',
+              left: '18%',
+              bottom: '18%',
+              filter: 'drop-shadow(0 0 8px #fde04766)'
+            }}>🎇</span>
+            <span style={{
+              fontSize: '4rem',
+              position: 'absolute',
+              right: '16%',
+              bottom: '15%',
+              filter: 'drop-shadow(0 0 10px #fde04788)'
+            }}>🥳</span>
+          </div>
+          <Modal
+            isOpen={matchModal.open}
+            onRequestClose={() => setMatchModal({ open: false, name: null })}
+            contentLabel="Match!"
+            ariaHideApp={false}
+            className="fixed inset-0 flex items-center justify-center z-50"
+            overlayClassName="fixed inset-0 bg-black bg-opacity-40 z-40"
+            style={{
+              content: {
+                animation: 'fadeInScale 1.2s cubic-bezier(0.4,0,0.2,1)',
+                transition: 'all 1.2s cubic-bezier(0.4,0,0.2,1)'
+              }
+            }}
           >
-            Close
-          </button>
-        </div>
-      </Modal>
+            <div
+              className={`modal-container bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full flex flex-col items-center border-4 ${lastMatchType === 'yes' ? 'match-green' : 'match-yellow'}`}
+              style={{
+                boxShadow: lastMatchType === 'yes'
+                  ? '0 0 24px 2px #4ade8055, 0 8px 32px 0 #bbf7d033'
+                  : '0 0 24px 2px #fde04755, 0 8px 32px 0 #fde04733',
+                borderColor: lastMatchType === 'yes' ? '#4ade80' : '#fde047',
+                background: lastMatchType === 'yes'
+                  ? 'linear-gradient(135deg, #f0fdf4 0%, #bbf7d0 100%)'
+                  : 'linear-gradient(135deg, #fffbe6 0%, #fef08a 100%)',
+                filter: lastMatchType === 'yes'
+                  ? 'drop-shadow(0 0 12px #4ade8055)'
+                  : 'drop-shadow(0 0 12px #fde04755)'
+              }}
+            >
+              <h2
+                className={`text-3xl font-extrabold mb-4 drop-shadow-lg ${lastMatchType === 'yes' ? 'text-green-500' : 'text-yellow-500'}`}
+                style={{
+                  textShadow: lastMatchType === 'yes'
+                    ? '0 0 8px #4ade8088, 0 2px 4px #bbf7d055'
+                    : '0 0 8px #fde04788, 0 2px 4px #facc1555'
+                }}
+              >
+                Congratulations!
+              </h2>
+              <div className={`text-xl font-bold mb-2 text-center ${lastMatchType === 'yes' ? 'text-green-700' : 'text-fuchsia-700'}`}>There is a match!</div>
+              <div className={`text-2xl font-extrabold mb-4 text-center ${lastMatchType === 'yes' ? 'text-green-600' : 'text-yellow-600'}`}
+                style={{
+                  textShadow: lastMatchType === 'yes'
+                    ? '0 0 4px #4ade8088'
+                    : '0 0 4px #fde04788'
+                }}
+              >{matchModal.name}</div>
+              <button
+                className={`mt-6 px-6 py-2 rounded-lg font-bold shadow transition-all duration-200 ${lastMatchType === 'yes' ? 'bg-gradient-to-br from-green-400 to-emerald-400 text-white hover:from-green-500 hover:to-emerald-500' : 'bg-gradient-to-br from-yellow-400 to-amber-400 text-white hover:from-yellow-500 hover:to-amber-500'}`}
+                onClick={() => setMatchModal({ open: false, name: null })}
+              >
+                Close
+              </button>
+            </div>
+          </Modal>
+          <style>{`
+            @keyframes fadeInScale {
+              0% { opacity: 0; transform: scale(0.85); }
+              100% { opacity: 1; transform: scale(1); }
+            }
+          `}</style>
+        </>
+      )}
       {/* 1st Row: Headline */}
       <div className="flex justify-center mb-4 px-4">
         <h1 className="text-3xl sm:text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-fuchsia-400 to-amber-400 drop-shadow-lg text-center flex items-center justify-center gap-2" style={{letterSpacing: '0.01em'}}>
