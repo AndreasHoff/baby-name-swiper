@@ -380,7 +380,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
         overlayClassName="fixed inset-0 bg-black bg-opacity-40 z-40"
       >
         <div className="modal-container bg-white rounded-2xl shadow-2xl p-6 max-w-lg w-full relative">
-          <h2 className="text-xl font-bold text-center mb-4 text-fuchsia-700">Names Left</h2>
+          <h2 className="text-xl font-bold text-center text-fuchsia-700">Names Left</h2>
           <ul className="divide-y divide-gray-200 max-h-96 overflow-y-auto mb-4">
             {pagedAllNames.map(n => (
               <li key={n.id} className="py-2 px-2 flex items-center justify-between">
