@@ -171,7 +171,6 @@ function App() {
           currentUser={currentUser}
           onNameAdded={handleNameAdded}
           onLogout={handleLogout}
-          refreshAllNames={fetchAllNames}
           refreshUserVotes={fetchUserVotes}
         />
       </div>
