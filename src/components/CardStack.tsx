@@ -18,6 +18,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
   const [dragX, setDragX] = useState(0);
   const [animating, setAnimating] = useState<null | 'no' | 'favorite' | 'yes'>(null);
   const [leavingCard, setLeavingCard] = useState<any | null>(null);
+  const [leavingCardId, setLeavingCardId] = useState<string | null>(null);
   // Only show names left in the deck in the modal
   const [showAllModal, setShowAllModal] = useState(false);
   const [allPage, setAllPage] = useState(0);
@@ -72,26 +73,25 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
     const card = deck[0];
     if (!card) return;
     console.log('[CardStack] User voted', direction, 'for', card.name, card.id);
-    if (direction === 'no') {
-      addToNoOrder(currentUser, card.id);
-      setDeck((prev) => prev.slice(1)); // Just remove from top, deck will rebuild in useEffect
+    if (direction === 'no' || direction === 'yes') {
+      if (direction === 'no') addToNoOrder(currentUser, card.id);
+      else removeFromNoOrder(currentUser, card.id);
+      setLeavingCardId(card.id);
       setAnimating(direction);
-      setTimeout(() => setAnimating(null), 400);
-    } else if (direction === 'favorite' || direction === 'yes') {
-      removeFromNoOrder(currentUser, card.id);
-      if (direction === 'favorite') {
-        setLeavingCard(card); // Set the floating card
-        setDeck((prev) => prev.slice(1)); // Remove from stack immediately
-        setAnimating('favorite');
-        setTimeout(() => {
-          setLeavingCard(null); // Remove floating card after animation
-          setAnimating(null);
-        }, 1200); // Match favorite animation duration (1.2s)
-      } else {
+      setTimeout(() => {
         setDeck((prev) => prev.slice(1));
-        setAnimating(direction);
-        setTimeout(() => setAnimating(null), 400);
-      }
+        setLeavingCardId(null);
+        setAnimating(null);
+      }, 700);
+    } else if (direction === 'favorite') {
+      removeFromNoOrder(currentUser, card.id);
+      setLeavingCard(card);
+      setDeck((prev) => prev.slice(1));
+      setAnimating('favorite');
+      setTimeout(() => {
+        setLeavingCard(null);
+        setAnimating(null);
+      }, 1200);
     }
     try {
       const userRef = doc(db, 'users', currentUser);
@@ -131,8 +131,18 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
   // Show a visible stack of up to 5 cards
   const stack = deck.slice(0, 5);
   const animationVariants = {
-    yes: { x: [0, 30, 0], boxShadow: '0 8px 24px 0 rgba(34,197,94,0.18)' },
-    no: { x: [0, -30, 0], boxShadow: '0 8px 24px 0 rgba(239,68,68,0.18)' },
+    yes: {
+      x: [0, 60, 120, 300],
+      opacity: [1, 1, 0.8, 0],
+      boxShadow: '0 8px 24px 0 rgba(34,197,94,0.18)',
+      transition: { duration: 0.7, times: [0, 0.3, 0.7, 1], ease: 'easeInOut' }
+    },
+    no: {
+      x: [0, -60, -120, -300],
+      opacity: [1, 1, 0.8, 0],
+      boxShadow: '0 8px 24px 0 rgba(239,68,68,0.18)',
+      transition: { duration: 0.7, times: [0, 0.3, 0.7, 1], ease: 'easeInOut' }
+    },
     favorite: {
       y: [0, -30, -80],
       scale: [1, 1.12, 1],
@@ -301,10 +311,11 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
             else if (i === 4) topPx = 16;
             const zIndex = stack.length - i;
             // Only animate the top card if not animating favorite (handled by floating card)
-            const isTop = i === 0;
-            const shouldAnimate = isTop && animating && animating !== 'favorite';
+            const isLeaving = card.id === leavingCardId && animating && animating !== 'favorite';
+            const isTop = i === 0 && !isLeaving;
+            const shouldAnimate = isLeaving;
             const transition = shouldAnimate
-              ? { type: 'tween', duration: 0.35, ease: 'easeInOut' }
+              ? animationVariants[animating!]?.transition || { type: 'tween', duration: 0.35, ease: 'easeInOut' }
               : { type: 'spring', stiffness: 200, damping: 20 };
             return (
               <motion.div
@@ -334,7 +345,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
                   }
                 }) : undefined}
                 onDrag={isTop ? ((_, info) => setDragX(info.offset.x)) : undefined}
-                className={`cardstack-card bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200 text-fuchsia-900 rounded-3xl shadow-2xl px-4 py-5 w-full min-h-[90px] flex flex-col items-center justify-center border-4 border-white select-none absolute left-0 right-0 mx-auto pointer-events-none` + (isTop ? ' pointer-events-auto' : '')}
+                className={`cardstack-card bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200 text-fuchsia-900 rounded-3xl shadow-2xl px-4 py-5 w-full min-h-[90px] flex flex-col items-center justify-center border-4 border-white select-none absolute left-0 right-0 mx-auto pointer-events-none${isTop ? ' pointer-events-auto' : ''}`}
                 style={{
                   top: topPx,
                   zIndex,
