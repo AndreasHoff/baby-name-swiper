@@ -172,6 +172,9 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
     );
   }
 
+  // Add subtle 'development' watermark if in dev environment
+  const isDev = import.meta.env.MODE === 'development' || import.meta.env.VITE_FIREBASE_PROJECT_ID?.includes('dev');
+
   return (
     <div className="w-full">
       {/* Match Modal */}
@@ -365,6 +368,14 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
                 <span className="text-base sm:text-lg font-semibold uppercase tracking-widest px-4 py-2 rounded-full bg-white bg-opacity-40 mt-3 sm:mt-4 shadow text-fuchsia-700 border border-fuchsia-200">
                   {card.gender}
                 </span>
+                {isDev && (
+                  <span
+                    className="pointer-events-none select-none absolute left-1/2 bottom-2 -translate-x-1/2 text-xl font-extrabold text-gray-400 opacity-50 z-10 whitespace-nowrap"
+                    style={{letterSpacing: '0.15em'}}
+                  >
+                    DEVELOPMENT
+                  </span>
+                )}
               </motion.div>
             );
           })}
