@@ -1,15 +1,13 @@
-// scripts/importNames.cjs
-// Usage: node scripts/importNames.cjs [--env=dev|prod]
+// scripts/importUsers.cjs
+// Usage: node scripts/importUsers.cjs [--env=dev|prod]
 // Or set FIREBASE_ENV=dev|prod
 // Default is prod
-// Populates Firestore with names from src/assets/largeNames.json
+// Populates Firestore 'users' collection with Andreas and Emilie
 
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
-const fs = require('fs');
 const path = require('path');
 
-// Add support for --env=dev|prod or FIREBASE_ENV
 const defaultEnv = 'prod';
 const argEnv = process.argv.find(arg => arg.startsWith('--env='));
 const env = argEnv ? argEnv.split('=')[1] : (process.env.FIREBASE_ENV || defaultEnv);
@@ -24,36 +22,31 @@ if (env === 'dev') {
   process.exit(1);
 }
 
-// Load service account key
 const serviceAccount = require(serviceAccountPath);
 
-// Initialize Firebase Admin SDK
 initializeApp({
   credential: cert(serviceAccount),
 });
 
 const db = getFirestore();
 
+const users = [
+  { id: 'Andreas', displayName: 'Andreas' },
+  { id: 'Emilie', displayName: 'Emilie' },
+];
+
 async function main() {
-  const namesPath = path.join(__dirname, '../src/assets/largeNames.json');
-  const names = JSON.parse(fs.readFileSync(namesPath, 'utf8'));
   let added = 0, skipped = 0;
-  for (const entry of names) {
-    const name = entry.name.trim();
-    // Only allow 'boy' or 'girl' as gender
-    const gender = (entry.gender === 'boy' || entry.gender === 'girl') ? entry.gender : 'boy';
-    // Check for duplicate (case-insensitive)
-    const snap = await db.collection('baby-names').where('name', '==', name).get();
-    if (!snap.empty) {
+  for (const user of users) {
+    const ref = db.collection('users').doc(user.id);
+    const snap = await ref.get();
+    if (snap.exists) {
       skipped++;
       continue;
     }
-    await db.collection('baby-names').add({
-      name,
-      gender,
-      votes: {},
-      isAMatch: false,
-      created: new Date().toISOString()
+    await ref.set({
+      displayName: user.displayName,
+      created: new Date().toISOString(),
     });
     added++;
   }
