@@ -26,3 +26,9 @@ dist-ssr
 # Firebase service account key (DO NOT COMMIT)
 serviceAccountKey.prod.json
 serviceAccountKey.dev.json
+
+
+# Environment files
+.env
+.env.development
+.env.production
