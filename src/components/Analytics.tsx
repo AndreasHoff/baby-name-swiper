@@ -42,12 +42,26 @@ export const Analytics: React.FC = () => {
         },
         avgNameLength: names.reduce((acc, n) => acc + (n.nameLength || n.name?.length || 0), 0) / names.length,
         recentlyAdded: names.filter(n => {
-          const createdAt = n.createdAt ? new Date(n.createdAt) : new Date(0);
-          return createdAt > sevenDaysAgo;
+          // Check both createdAt and created fields
+          const timestamp = n.createdAt || n.created;
+          if (!timestamp) return false;
+          
+          const createdDate = new Date(timestamp);
+          return createdDate > sevenDaysAgo;
         }).length,
         specialCharsCount: names.filter(n => n.hasSpecialChars).length,
         mostCommonLength: getMostCommonLength(names),
       };
+
+      // Debug logging to understand data issues
+      console.log('[Analytics] Debug info:');
+      console.log('Total names:', names.length);
+      console.log('Boy names:', names.filter(n => n.gender === 'boy').length);
+      console.log('Girl names:', names.filter(n => n.gender === 'girl').length);
+      console.log('Unisex names:', names.filter(n => n.gender === 'unisex').length);
+      console.log('Unknown gender names:', names.filter(n => !n.gender || (n.gender !== 'boy' && n.gender !== 'girl' && n.gender !== 'unisex')).length);
+      console.log('Recent names (7 days):', analytics.recentlyAdded);
+      console.log('Names with timestamps:', names.filter(n => n.createdAt || n.created).length);
 
       setData(analytics);
     } catch (error) {

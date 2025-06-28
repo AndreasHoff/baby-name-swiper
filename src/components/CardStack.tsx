@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Modal from 'react-modal';
 import { db } from '../firebase';
 import { getCategoriesForName, getCategoryById } from '../utils/nameCategories';
+import { fetchAllTags, getTagById, type Tag } from '../utils/tagManager';
 import { SwipeButtons } from './SwipeButtons';
 
 // Animation state interface
@@ -25,6 +26,9 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
   const [deckData, setDeckData] = useState<any[]>([]);
   const [transitioningCard, setTransitioningCard] = useState<any | null>(null);
   const [animationState, setAnimationState] = useState<AnimationState>({ type: null, cardId: null });
+  
+  // Tags state for proper tag display
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   
   // Modal and UI state
   const [showAllModal, setShowAllModal] = useState(false);
@@ -80,6 +84,21 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
     inNoOrder.sort((a, b) => noOrder.indexOf(a.id) - noOrder.indexOf(b.id));
     setDeckData([...notInNoOrder, ...inNoOrder]);
   }, [allNames, userVotes, currentUser]);
+
+  // Load tags for proper tag display
+  useEffect(() => {
+    const loadTags = async () => {
+      try {
+        const tags = await fetchAllTags();
+        setAvailableTags(tags);
+        console.log('[CardStack] Loaded tags for display:', tags.length);
+      } catch (error) {
+        console.error('[CardStack] Error loading tags:', error);
+      }
+    };
+    
+    loadTags();
+  }, [allNames]); // Reload tags when allNames changes (in case new tags were created)
 
   // Countdown effect for undo button (10 seconds)
   useEffect(() => {
@@ -466,37 +485,39 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
             initial={{ y: 0, scale: 1, opacity: 1, x: 0 }}
             animate={animationVariants[animationState.type]}
             onAnimationComplete={handleAnimationComplete}
-            className={`cardstack-card bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200 text-fuchsia-900 rounded-3xl shadow-2xl px-4 py-5 w-full min-h-[90px] flex flex-col items-center justify-center border-4 border-white select-none absolute left-0 right-0 mx-auto pointer-events-none`}
+            className={`cardstack-card bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200 text-fuchsia-900 rounded-3xl shadow-2xl px-4 py-4 w-full min-h-[90px] flex flex-col items-center justify-start border-4 border-white select-none absolute left-0 right-0 mx-auto pointer-events-none`}
             style={{
               top: 0,
               zIndex: 99,
               boxShadow: `0 4px 16px 0 rgba(0,0,0,0.10)`
             }}
           >
-            <span className="text-4xl sm:text-5xl font-extrabold mb-3 sm:mb-4 drop-shadow-lg text-center">{transitioningCard.name}</span>
-            <span className="text-base sm:text-lg font-semibold uppercase tracking-widest px-4 py-2 rounded-full bg-white bg-opacity-40 mt-3 sm:mt-4 shadow text-fuchsia-700 border border-fuchsia-200">
+            <span className="text-4xl sm:text-5xl font-extrabold mb-2 drop-shadow-lg text-center">{transitioningCard.name}</span>
+            <span className="text-base sm:text-lg font-semibold uppercase tracking-widest px-4 py-2 rounded-full bg-white bg-opacity-40 mb-3 shadow text-fuchsia-700 border border-fuchsia-200">
               {transitioningCard.gender}
             </span>
-            {/* Display categories for transitioning card */}
+            {/* Display tags for transitioning card */}
             {(() => {
               const categories = transitioningCard.categories || (transitioningCard.name ? getCategoriesForName(transitioningCard.name) : []);
               if (categories.length > 0) {
                 return (
-                  <div className="flex flex-wrap justify-center gap-1 mt-2 max-w-[280px]">
-                    {categories.slice(0, 3).map((categoryId: string) => {
-                      const category = getCategoryById(categoryId);
+                  <div className="flex flex-wrap justify-center gap-1 max-w-[280px]">
+                    {categories.slice(0, 6).map((categoryId: string) => {
+                      // Try new tag system first, fall back to old category system
+                      const tag = getTagById(categoryId, availableTags);
+                      const category = tag || getCategoryById(categoryId);
                       return category ? (
                         <span 
                           key={categoryId}
-                          className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-30 text-fuchsia-600 border border-fuchsia-100"
+                          className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-40 text-fuchsia-700 border border-fuchsia-200 font-medium"
                         >
                           {category.name}
                         </span>
                       ) : null;
                     })}
-                    {categories.length > 3 && (
-                      <span className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-30 text-fuchsia-600 border border-fuchsia-100">
-                        +{categories.length - 3} more
+                    {categories.length > 6 && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-40 text-fuchsia-700 border border-fuchsia-200 font-medium">
+                        +{categories.length - 6}
                       </span>
                     )}
                   </div>
@@ -546,7 +567,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4, ease: 'easeOut' }}
-              className={`cardstack-card bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200 text-fuchsia-900 rounded-3xl shadow-2xl px-4 py-5 w-full min-h-[90px] flex flex-col items-center justify-center border-4 border-white select-none absolute left-0 right-0 mx-auto pointer-events-none${i === 0 ? ' pointer-events-auto' : ''}`}
+              className={`cardstack-card bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200 text-fuchsia-900 rounded-3xl shadow-2xl px-4 py-4 w-full min-h-[90px] flex flex-col items-center justify-start border-4 border-white select-none absolute left-0 right-0 mx-auto pointer-events-none${i === 0 ? ' pointer-events-auto' : ''}`}
               style={{
                 top: topPx,
                 zIndex,
@@ -554,30 +575,32 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
               }}
               whileTap={i === 0 ? { scale: 0.98 } : undefined}
             >
-              <span className="text-4xl sm:text-5xl font-extrabold mb-3 sm:mb-4 drop-shadow-lg text-center">{card.name}</span>
-              <span className="text-base sm:text-lg font-semibold uppercase tracking-widest px-4 py-2 rounded-full bg-white bg-opacity-40 mt-3 sm:mt-4 shadow text-fuchsia-700 border border-fuchsia-200">
+              <span className="text-4xl sm:text-5xl font-extrabold mb-2 drop-shadow-lg text-center">{card.name}</span>
+              <span className="text-base sm:text-lg font-semibold uppercase tracking-widest px-4 py-2 rounded-full bg-white bg-opacity-40 mb-3 shadow text-fuchsia-700 border border-fuchsia-200">
                 {card.gender}
               </span>
-              {/* Display categories */}
+              {/* Display tags */}
               {(() => {
                 const categories = card.categories || (card.name ? getCategoriesForName(card.name) : []);
                 if (categories.length > 0) {
                   return (
-                    <div className="flex flex-wrap justify-center gap-1 mt-2 max-w-[280px]">
-                      {categories.slice(0, 3).map((categoryId: string) => {
-                        const category = getCategoryById(categoryId);
+                    <div className="flex flex-wrap justify-center gap-1 max-w-[280px]">
+                      {categories.slice(0, 6).map((categoryId: string) => {
+                        // Try new tag system first, fall back to old category system
+                        const tag = getTagById(categoryId, availableTags);
+                        const category = tag || getCategoryById(categoryId);
                         return category ? (
                           <span 
                             key={categoryId}
-                            className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-30 text-fuchsia-600 border border-fuchsia-100"
+                            className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-40 text-fuchsia-700 border border-fuchsia-200 font-medium"
                           >
                             {category.name}
                           </span>
                         ) : null;
                       })}
-                      {categories.length > 3 && (
-                        <span className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-30 text-fuchsia-600 border border-fuchsia-100">
-                          +{categories.length - 3} more
+                      {categories.length > 6 && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-40 text-fuchsia-700 border border-fuchsia-200 font-medium">
+                          +{categories.length - 6}
                         </span>
                       )}
                     </div>

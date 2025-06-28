@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { NAME_CATEGORIES, getCategoriesForName } from '../utils/nameCategories';
+import React, { useEffect, useState } from 'react';
+import type { Tag } from '../utils/tagManager';
+import { createTag, fetchAllTags } from '../utils/tagManager';
 
 interface AddBabyNameProps {
   onNameAdded: (nameObject: {
@@ -19,8 +20,32 @@ export const AddBabyName: React.FC<AddBabyNameProps> = ({ onNameAdded }) => {
     const savedGender = localStorage.getItem('lastSelectedGender');
     return (savedGender === 'boy' || savedGender === 'girl' || savedGender === 'unisex') ? savedGender : 'boy';
   });
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  
+  // New tag system state
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [isLoadingTags, setIsLoadingTags] = useState(true);
+  const [newTagName, setNewTagName] = useState('');
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
+
+  // Load tags from Firestore on component mount
+  useEffect(() => {
+    const loadTags = async () => {
+      console.log('[AddBabyName] Loading tags from Firestore...');
+      setIsLoadingTags(true);
+      try {
+        const tags = await fetchAllTags();
+        setAvailableTags(tags);
+        console.log('[AddBabyName] Loaded tags:', tags);
+      } catch (error) {
+        console.error('[AddBabyName] Error loading tags:', error);
+      } finally {
+        setIsLoadingTags(false);
+      }
+    };
+    
+    loadTags();
+  }, []);
 
   // Save gender preference when it changes
   const handleGenderChange = (newGender: 'boy' | 'girl' | 'unisex') => {
@@ -28,33 +53,51 @@ export const AddBabyName: React.FC<AddBabyNameProps> = ({ onNameAdded }) => {
     localStorage.setItem('lastSelectedGender', newGender);
   };
 
-  // Auto-suggest categories when name changes
+  // Handle name input (no auto-suggestion anymore)
   const handleNameChange = (newName: string) => {
     setName(newName);
     console.log('[AddBabyName] Name input changed:', newName);
-    
-    // Auto-suggest categories based on the name
-    if (newName.trim().length > 2) {
-      const suggestedCategories = getCategoriesForName(newName.trim());
-      setSelectedCategories(suggestedCategories);
-    } else {
-      setSelectedCategories([]);
-    }
   };
 
-  // Toggle category selection
-  const toggleCategory = (categoryId: string) => {
-    setSelectedCategories(prev => 
-      prev.includes(categoryId) 
-        ? prev.filter(id => id !== categoryId)
-        : [...prev, categoryId]
+  // Toggle tag selection
+  const toggleTag = (tagId: string) => {
+    setSelectedTagIds(prev => 
+      prev.includes(tagId) 
+        ? prev.filter(id => id !== tagId)
+        : [...prev, tagId]
     );
+  };
+
+  // Create a new tag
+  const handleCreateTag = async () => {
+    if (!newTagName.trim() || isCreatingTag) return;
+    
+    console.log('[AddBabyName] Creating new tag:', newTagName.trim());
+    setIsCreatingTag(true);
+    
+    try {
+      const createdTag = await createTag(newTagName.trim());
+      if (createdTag) {
+        // Add to available tags
+        setAvailableTags(prev => [...prev, createdTag].sort((a, b) => a.name.localeCompare(b.name)));
+        // Auto-select the new tag
+        setSelectedTagIds(prev => [...prev, createdTag.id]);
+        // Clear the input
+        setNewTagName('');
+        console.log('[AddBabyName] Tag created and selected:', createdTag);
+      }
+    } catch (error) {
+      console.error('[AddBabyName] Error creating tag:', error);
+    } finally {
+      setIsCreatingTag(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('[AddBabyName] Form submitted:', name, gender, 'categories:', selectedCategories);
+    console.log('[AddBabyName] Form submitted:', name, gender, 'tags:', selectedTagIds);
     if (!name.trim()) return;
+    
     // Create the new name object with extra fields for analytics
     const newName = {
       name: name.trim(),
@@ -66,8 +109,9 @@ export const AddBabyName: React.FC<AddBabyNameProps> = ({ onNameAdded }) => {
       source: 'manual', // source of the name (manual, link, etc.)
       nameLength: name.trim().length, // analytics: name length
       hasSpecialChars: /[^a-zA-ZæøåÆØÅ\s-']/.test(name.trim()), // analytics: special characters
-      categories: selectedCategories, // selected categories
+      categories: selectedTagIds, // selected tag IDs
     };
+    
     // Pass the full object with analytics data
     if (onNameAdded) onNameAdded({
       name: newName.name,
@@ -77,11 +121,10 @@ export const AddBabyName: React.FC<AddBabyNameProps> = ({ onNameAdded }) => {
       nameLength: newName.nameLength,
       categories: newName.categories
     });
-    // Optionally: send newName to Firestore here if needed
+    
     console.log('[AddBabyName] Full new name object:', newName);
     setName('');
-    setSelectedCategories([]);
-    setShowCategoryPicker(false);
+    setSelectedTagIds([]);
     // Don't reset gender - keep it persistent
   };
 
@@ -101,56 +144,95 @@ export const AddBabyName: React.FC<AddBabyNameProps> = ({ onNameAdded }) => {
           />
         </div>
 
-        {/* Category suggestions - show when name has categories */}
-        {selectedCategories.length > 0 && (
-          <div>
-            <label className="block text-sm font-semibold text-fuchsia-700 mb-2">
-              Suggested Categories (tap to toggle):
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {NAME_CATEGORIES.filter(cat => selectedCategories.includes(cat.id)).map(category => (
-                <button
-                  key={category.id}
-                  type="button"
-                  onClick={() => toggleCategory(category.id)}
-                  className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 ${
-                    selectedCategories.includes(category.id)
-                      ? 'bg-fuchsia-500 text-white shadow-md'
-                      : 'bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-200'
-                  }`}
-                >
-                  {category.name}
-                </button>
-              ))}
-            </div>
-            
-            {/* Option to add more categories */}
-            <button
-              type="button"
-              onClick={() => setShowCategoryPicker(!showCategoryPicker)}
-              className="mt-2 text-sm text-fuchsia-600 hover:text-fuchsia-800 font-medium"
-            >
-              {showCategoryPicker ? 'Hide' : 'Add more categories'}
-            </button>
-            
-            {showCategoryPicker && (
-              <div className="mt-2 p-3 bg-fuchsia-50 rounded-lg border border-fuchsia-200">
-                <div className="flex flex-wrap gap-2">
-                  {NAME_CATEGORIES.filter(cat => !selectedCategories.includes(cat.id)).map(category => (
-                    <button
-                      key={category.id}
-                      type="button"
-                      onClick={() => toggleCategory(category.id)}
-                      className="px-3 py-1 rounded-full text-sm font-medium bg-white text-fuchsia-700 hover:bg-fuchsia-100 border border-fuchsia-200 transition-all duration-200"
-                    >
-                      {category.name}
-                    </button>
-                  ))}
+        {/* Tags Section - Always Visible */}
+        <div>
+          <label className="block text-sm font-semibold text-fuchsia-700 mb-2">
+            Select Tags:
+          </label>
+          
+          {isLoadingTags ? (
+            <div className="text-sm text-fuchsia-600">Loading tags...</div>
+          ) : (
+            <>
+              {/* Selected Tags */}
+              {selectedTagIds.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-xs text-fuchsia-600 mb-1">Selected tags:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {availableTags
+                      .filter(tag => selectedTagIds.includes(tag.id))
+                      .map(tag => (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => toggleTag(tag.id)}
+                          className="px-3 py-1 rounded-full text-sm font-medium bg-fuchsia-500 text-white shadow-md hover:bg-fuchsia-600 transition-all duration-200"
+                        >
+                          {tag.name} ✕
+                        </button>
+                      ))
+                    }
+                  </div>
+                </div>
+              )}
+              
+              {/* Main Tags Container */}
+              <div className="p-3 bg-fuchsia-50 rounded-lg border border-fuchsia-200">
+                {/* Available Tags */}
+                {availableTags.length > 0 ? (
+                  <>
+                    <p className="text-sm font-medium text-fuchsia-700 mb-2">Available tags:</p>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {availableTags
+                        .filter(tag => !selectedTagIds.includes(tag.id))
+                        .map(tag => (
+                          <button
+                            key={tag.id}
+                            type="button"
+                            onClick={() => toggleTag(tag.id)}
+                            className="px-3 py-1 rounded-full text-sm font-medium bg-white text-fuchsia-700 hover:bg-fuchsia-100 border border-fuchsia-200 transition-all duration-200"
+                          >
+                            {tag.name}
+                          </button>
+                        ))
+                      }
+                    </div>
+                    <div className="border-t border-fuchsia-200 pt-3">
+                      <p className="text-xs font-medium text-fuchsia-600 mb-2">Create new tag:</p>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-fuchsia-600 mb-3">No tags yet. Create the first one:</p>
+                )}
+                
+                {/* Create New Tag - Always Visible */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newTagName}
+                    onChange={e => setNewTagName(e.target.value)}
+                    placeholder="New tag name..."
+                    className="flex-1 px-3 py-1 text-sm rounded border border-fuchsia-300 focus:border-fuchsia-400 focus:outline-none"
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleCreateTag();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCreateTag}
+                    disabled={!newTagName.trim() || isCreatingTag}
+                    className="px-3 py-1 text-sm bg-fuchsia-500 text-white rounded hover:bg-fuchsia-600 disabled:bg-gray-300 transition-all duration-200"
+                  >
+                    {isCreatingTag ? '...' : '+'}
+                  </button>
                 </div>
               </div>
-            )}
-          </div>
-        )}
+            </>
+          )}
+        </div>
 
         {/* Gender selection - 2nd row */}
         <div className="flex gap-3 justify-center">
