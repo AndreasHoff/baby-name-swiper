@@ -52,11 +52,11 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
   const [undoCountdown, setUndoCountdown] = useState<number>(0);
 
   // Debug info (development only) - make it robust against transitional states
-  const debugInfo: DebugInfo = {
+  /* const debugInfo: DebugInfo = {
     topCardName: (deckData && deckData.length > 0) ? deckData[0]?.name || null : null,
     deckLength: deckData ? deckData.length : 0,
     animationState: animationState?.type ? `${animationState.type} (${animationState.cardId || 'unknown'})` : 'idle'
-  };
+  }; */
 
   // Build deck: filter out names with 'yes' or 'favorite' vote
   useEffect(() => {
