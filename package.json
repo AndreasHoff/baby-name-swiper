@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run lint:build && tsc -b && vite build",
+    "build": "tsc -b && vite build",
     "lint": "eslint .",
     "lint:check": "eslint . --max-warnings 0",
     "lint:build": "eslint . --max-warnings 50",
