@@ -1,5 +1,5 @@
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import Modal from 'react-modal';
 import { db } from '../firebase';
@@ -44,11 +44,14 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
     timestamp: number;
   } | null>(null);
 
-  // Debug info (development only)
+  // Countdown for undo button (10 seconds)
+  const [undoCountdown, setUndoCountdown] = useState<number>(0);
+
+  // Debug info (development only) - make it robust against transitional states
   const debugInfo: DebugInfo = {
-    topCardName: deckData[0]?.name || null,
-    deckLength: deckData.length,
-    animationState: animationState.type ? `${animationState.type} (${animationState.cardId})` : 'idle'
+    topCardName: (deckData && deckData.length > 0) ? deckData[0]?.name || null : null,
+    deckLength: deckData ? deckData.length : 0,
+    animationState: animationState?.type ? `${animationState.type} (${animationState.cardId || 'unknown'})` : 'idle'
   };
 
   // Build deck: filter out names with 'yes' or 'favorite' vote
@@ -66,6 +69,35 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
     inNoOrder.sort((a, b) => noOrder.indexOf(a.id) - noOrder.indexOf(b.id));
     setDeckData([...notInNoOrder, ...inNoOrder]);
   }, [allNames, userVotes, currentUser]);
+
+  // Countdown effect for undo button (10 seconds)
+  useEffect(() => {
+    if (!lastAction) {
+      setUndoCountdown(0);
+      return;
+    }
+
+    const updateCountdown = () => {
+      const elapsed = Date.now() - lastAction.timestamp;
+      const remaining = Math.max(0, 10000 - elapsed);
+      const secondsLeft = Math.ceil(remaining / 1000);
+      
+      if (secondsLeft <= 0) {
+        setUndoCountdown(0);
+        setLastAction(null); // Clear the action when countdown reaches 0
+      } else {
+        setUndoCountdown(secondsLeft);
+      }
+    };
+
+    // Update immediately
+    updateCountdown();
+
+    // Update every 100ms for smooth countdown
+    const interval = setInterval(updateCountdown, 100);
+
+    return () => clearInterval(interval);
+  }, [lastAction]);
 
   // Helpers for sessionStorage 'no' order
   function getNoOrderKey(user: string) {
@@ -158,16 +190,16 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
     
     console.log('[CardStack] Animation completed for', transitioningCard.name);
     
-    // Remove the card from deck data
-    setDeckData(prev => prev.filter(card => card.id !== transitioningCard.id));
+    const cardId = transitioningCard.id;
     
-    // Clear animation state
+    // Batch all state updates together to prevent multiple re-renders
+    setDeckData(prev => prev.filter(card => card.id !== cardId));
     setTransitioningCard(null);
     setAnimationState({ type: null, cardId: null });
     
-    // Log the current deck order (names only)
+    // Log the current deck order (names only) - use cardId from closure
     setTimeout(() => {
-      console.log('[CardStack] Deck after vote:', deckData.filter(card => card.id !== transitioningCard.id).map(n => n.name));
+      console.log('[CardStack] Deck after vote: animation complete');
     }, 10);
   };
 
@@ -241,8 +273,16 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
     }
   };
 
-  // Show a visible stack of up to 5 cards from deckData
-  const stack = deckData.slice(0, 5);
+  // Always show exactly 5 card slots - use placeholders for empty slots
+  const STACK_SIZE = 5;
+  const realCards = deckData.slice(0, STACK_SIZE);
+  const placeholderCards = Array(Math.max(0, STACK_SIZE - realCards.length)).fill(null).map((_, i) => ({
+    id: `placeholder-${i}`,
+    name: '...',
+    gender: '',
+    isPlaceholder: true
+  }));
+  const stack = [...realCards, ...placeholderCards];
   
   // Simple animation variants - only for button clicks
   const animationVariants = {
@@ -292,9 +332,10 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
     <div className="w-full">
       {/* Developer Debug Overlay */}
       {isDev && (
-        <div className="fixed bottom-4 left-4 bg-black bg-opacity-75 text-white p-3 rounded-lg text-xs font-mono z-50">
+        <div className="fixed bottom-4 left-4 bg-black bg-opacity-75 text-white p-3 rounded-lg text-xs font-mono z-50" style={{ minWidth: '200px', maxWidth: '250px' }}>
           <div><strong>Debug Info:</strong></div>
           <div>Top Card: {debugInfo.topCardName || 'None'}</div>
+          <div>Real Cards: {realCards.length}/{STACK_SIZE}</div>
           <div>Deck Length: {debugInfo.deckLength}</div>
           <div>Animation: {debugInfo.animationState}</div>
           <div>Transitioning: {transitioningCard?.name || 'None'}</div>
@@ -405,7 +446,8 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
         </h1>
       </div>
       {/* 2nd Row: Card Stack */}
-      <div className="flex justify-center relative px-4" style={{ minHeight: '300px' }}>
+      <div className="flex justify-center relative px-4" style={{ minHeight: '300px', width: '100%' }}>
+        <div className="relative w-full max-w-sm" style={{ height: '300px' }}>
         {/* Transitioning card for animations */}
         {transitioningCard && animationState.type && (
           <motion.div
@@ -426,7 +468,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
             </span>
             {/* Display categories for transitioning card */}
             {(() => {
-              const categories = transitioningCard.categories || getCategoriesForName(transitioningCard.name);
+              const categories = transitioningCard.categories || (transitioningCard.name ? getCategoriesForName(transitioningCard.name) : []);
               if (categories.length > 0) {
                 return (
                   <div className="flex flex-wrap justify-center gap-1 mt-2 max-w-[280px]">
@@ -453,93 +495,97 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
             })()}
           </motion.div>
         )}
-        {/* Card stack - only show cards that are not transitioning */}
-        <AnimatePresence>
-          {stack.filter(card => !transitioningCard || card.id !== transitioningCard.id).map((card: any, i: number) => {
-            let topPx = 0;
-            if (i === 1) topPx = 4;
-            else if (i === 2) topPx = 8;
-            else if (i === 3) topPx = 12;
-            else if (i === 4) topPx = 16;
-            const zIndex = stack.length - i;
-            
+        {/* Fixed stack of 5 cards - no AnimatePresence needed */}
+        {stack.map((card: any, i: number) => {
+          // Skip cards that are currently transitioning
+          if (transitioningCard && card.id === transitioningCard.id) {
+            return null;
+          }
+          
+          let topPx = 0;
+          if (i === 1) topPx = 4;
+          else if (i === 2) topPx = 8;
+          else if (i === 3) topPx = 12;
+          else if (i === 4) topPx = 16;
+          const zIndex = STACK_SIZE - i;
+          
+          // For placeholder cards, use a different style
+          if (card.isPlaceholder) {
             return (
               <motion.div
                 key={card.id}
-                initial={{ y: 40, opacity: 0, scale: 1 }}
-                animate={{
-                  y: 0,
-                  opacity: 1,
-                  scale: 1,
-                }}
-                exit={
-                  animationState.type === 'favorite' 
-                    ? { y: -40, opacity: 0, scale: 1 }  // Upward float for favorite
-                    : { opacity: 0, scale: 1 }          // Just fade out for yes/no
-                }
-                transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-                className={`cardstack-card bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200 text-fuchsia-900 rounded-3xl shadow-2xl px-4 py-5 w-full min-h-[90px] flex flex-col items-center justify-center border-4 border-white select-none absolute left-0 right-0 mx-auto pointer-events-none${i === 0 ? ' pointer-events-auto' : ''}`}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 0.3, scale: 1 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                className="cardstack-card bg-gradient-to-br from-gray-100 via-gray-150 to-gray-200 text-gray-400 rounded-3xl shadow-lg px-4 py-5 w-full min-h-[90px] flex flex-col items-center justify-center border-4 border-gray-200 select-none absolute left-0 right-0 mx-auto pointer-events-none"
                 style={{
                   top: topPx,
                   zIndex,
-                  boxShadow: `0 ${4 + i * 2}px ${16 - i * 2}px 0 rgba(0,0,0,0.10)`,
+                  boxShadow: `0 ${2 + i}px ${8 - i}px 0 rgba(0,0,0,0.05)`,
                 }}
-                whileTap={i === 0 ? { scale: 0.98 } : undefined}
               >
-                <span className="text-4xl sm:text-5xl font-extrabold mb-3 sm:mb-4 drop-shadow-lg text-center">{card.name}</span>
-                <span className="text-base sm:text-lg font-semibold uppercase tracking-widest px-4 py-2 rounded-full bg-white bg-opacity-40 mt-3 sm:mt-4 shadow text-fuchsia-700 border border-fuchsia-200">
-                  {card.gender}
-                </span>
-                {/* Display categories */}
-                {(() => {
-                  const categories = card.categories || getCategoriesForName(card.name);
-                  if (categories.length > 0) {
-                    return (
-                      <div className="flex flex-wrap justify-center gap-1 mt-2 max-w-[280px]">
-                        {categories.slice(0, 3).map((categoryId: string) => {
-                          const category = getCategoryById(categoryId);
-                          return category ? (
-                            <span 
-                              key={categoryId}
-                              className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-30 text-fuchsia-600 border border-fuchsia-100"
-                            >
-                              {category.name}
-                            </span>
-                          ) : null;
-                        })}
-                        {categories.length > 3 && (
-                          <span className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-30 text-fuchsia-600 border border-fuchsia-100">
-                            +{categories.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
-                {isDev && (
-                  <span
-                    className="pointer-events-none select-none absolute left-1/2 bottom-2 -translate-x-1/2 text-xl font-extrabold text-gray-400 opacity-50 z-10 whitespace-nowrap"
-                    style={{letterSpacing: '0.15em'}}
-                  >
-                    DEVELOPMENT
-                  </span>
-                )}
+                <span className="text-3xl font-bold text-gray-300">•••</span>
               </motion.div>
             );
-          })}
-        </AnimatePresence>
-      </div>
-      {/* Deck count paragraph */}
-      <p className="text-center text-fuchsia-700 font-semibold mb-2">{deckData.length} name{deckData.length !== 1 ? 's' : ''} left</p>
-      {/* 3rd Row: Show All Names Button */}
-      <div className="flex justify-center mb-4">
-        <button
-          className="px-4 py-2 sm:px-6 sm:py-2 rounded-lg bg-gradient-to-br from-amber-300 to-fuchsia-300 text-fuchsia-900 font-bold shadow hover:from-amber-400 hover:to-fuchsia-400 transition-all duration-200 text-sm sm:text-base"
-          onClick={() => setShowAllModal(true)}
-        >
-          Show all names
-        </button>
+          }
+          
+          return (
+            <motion.div
+              key={card.id}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              className={`cardstack-card bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200 text-fuchsia-900 rounded-3xl shadow-2xl px-4 py-5 w-full min-h-[90px] flex flex-col items-center justify-center border-4 border-white select-none absolute left-0 right-0 mx-auto pointer-events-none${i === 0 ? ' pointer-events-auto' : ''}`}
+              style={{
+                top: topPx,
+                zIndex,
+                boxShadow: `0 ${4 + i * 2}px ${16 - i * 2}px 0 rgba(0,0,0,0.10)`,
+              }}
+              whileTap={i === 0 ? { scale: 0.98 } : undefined}
+            >
+              <span className="text-4xl sm:text-5xl font-extrabold mb-3 sm:mb-4 drop-shadow-lg text-center">{card.name}</span>
+              <span className="text-base sm:text-lg font-semibold uppercase tracking-widest px-4 py-2 rounded-full bg-white bg-opacity-40 mt-3 sm:mt-4 shadow text-fuchsia-700 border border-fuchsia-200">
+                {card.gender}
+              </span>
+              {/* Display categories */}
+              {(() => {
+                const categories = card.categories || (card.name ? getCategoriesForName(card.name) : []);
+                if (categories.length > 0) {
+                  return (
+                    <div className="flex flex-wrap justify-center gap-1 mt-2 max-w-[280px]">
+                      {categories.slice(0, 3).map((categoryId: string) => {
+                        const category = getCategoryById(categoryId);
+                        return category ? (
+                          <span 
+                            key={categoryId}
+                            className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-30 text-fuchsia-600 border border-fuchsia-100"
+                          >
+                            {category.name}
+                          </span>
+                        ) : null;
+                      })}
+                      {categories.length > 3 && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-30 text-fuchsia-600 border border-fuchsia-100">
+                          +{categories.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              {isDev && (
+                <span
+                  className="pointer-events-none select-none absolute left-1/2 bottom-2 -translate-x-1/2 text-xl font-extrabold text-gray-400 opacity-50 z-10 whitespace-nowrap"
+                  style={{letterSpacing: '0.15em'}}
+                >
+                  DEVELOPMENT
+                </span>
+              )}
+            </motion.div>
+          );
+        })}
+        </div>
       </div>
       {/* Modal for all names */}
       <Modal
@@ -594,18 +640,23 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
           </div>
         </div>
       </Modal>
-      {/* Undo Button - Show if there's a recent action */}
-      {lastAction && (Date.now() - lastAction.timestamp < 30000) && (
-        <div className="flex justify-center mb-4">
-          <button
-            onClick={handleUndo}
-            className="px-4 py-2 rounded-lg bg-gradient-to-br from-orange-400 to-red-400 text-white font-bold shadow hover:from-orange-500 hover:to-red-500 transition-all duration-200 flex items-center gap-2"
-          >
-            <span>↶</span>
-            Undo {lastAction.cardName}
-          </button>
-        </div>
-      )}
+      {/* Undo Button - Show if there's a recent action - Reserve space to prevent layout shifts */}
+      <div className="flex flex-col items-center mb-4" style={{ minHeight: '72px' }}>
+        {lastAction && undoCountdown > 0 && (
+          <>
+            <button
+              onClick={handleUndo}
+              className="px-4 py-2 rounded-lg bg-gradient-to-br from-orange-400 to-red-400 text-white font-bold shadow hover:from-orange-500 hover:to-red-500 transition-all duration-200 flex items-center gap-2"
+            >
+              <span>↶</span>
+              Undo {lastAction.cardName}
+            </button>
+            <div className="text-xs text-gray-500 mt-1 font-mono">
+              {undoCountdown}s
+            </div>
+          </>
+        )}
+      </div>
       {/* 4th Row: Voting Buttons - 3 Columns */}
       <div className="flex justify-center gap-6 sm:gap-8 mb-4 px-4">
         <SwipeButtons

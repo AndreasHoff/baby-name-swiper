@@ -55,6 +55,16 @@ export const NAME_CATEGORIES: NameCategory[] = [
 export function categorizeNames(names: Array<{ name: string; gender: string }>): Array<{ name: string; gender: string; categories: string[] }> {
   return names.map(nameObj => {
     const categories: string[] = [];
+    
+    // Validate that name exists and is a string
+    if (!nameObj?.name || typeof nameObj.name !== 'string') {
+      return {
+        name: nameObj?.name || '',
+        gender: nameObj?.gender || '',
+        categories
+      };
+    }
+    
     const nameLower = nameObj.name.toLowerCase().trim();
     
     for (const category of NAME_CATEGORIES) {
@@ -87,6 +97,11 @@ export function getCategoryById(id: string): NameCategory | undefined {
 }
 
 export function getCategoriesForName(name: string): string[] {
+  // Validate that name exists and is a string
+  if (!name || typeof name !== 'string') {
+    return [];
+  }
+  
   const result = categorizeNames([{ name, gender: 'unisex' }]);
   return result[0]?.categories || [];
 }
