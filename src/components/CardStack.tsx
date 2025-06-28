@@ -361,7 +361,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
   return (
     <div className="w-full">
       {/* Developer Debug Overlay */}
-      {isDev && (
+      {/* {isDev && (
         <div className="fixed bottom-4 left-4 bg-black bg-opacity-75 text-white p-3 rounded-lg text-xs font-mono z-50" style={{ minWidth: '200px', maxWidth: '250px' }}>
           <div><strong>Debug Info:</strong></div>
           <div>Top Card: {debugInfo.topCardName || 'None'}</div>
@@ -370,7 +370,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
           <div>Animation: {debugInfo.animationState}</div>
           <div>Transitioning: {transitioningCard?.name || 'None'}</div>
         </div>
-      )}
+      )} */}
       {/* Match Modal */}
       {matchModal.open && (
         <>
@@ -469,7 +469,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
         </>
       )}
       {/* 1st Row: Headline */}
-      <div className="flex justify-center mb-4 px-4">
+      <div className="flex justify-center px-4">
         <h1 className="text-3xl sm:text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-fuchsia-400 to-amber-400 drop-shadow-lg text-center flex items-center justify-center gap-2" style={{letterSpacing: '0.01em'}}>
           <span role="img" aria-label="baby" className="text-4xl sm:text-xl align-middle text-black bg-none" style={{color: '#222', background: 'none'}}>👶</span>
           <span className="leading-tight">Baby Name Swiper</span>

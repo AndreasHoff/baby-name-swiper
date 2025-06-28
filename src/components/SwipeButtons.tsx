@@ -7,7 +7,7 @@ export const SwipeButtons: React.FC<{
   disabled: boolean;
 }> = ({ currentUser: _currentUser, top: _top, onVote, disabled }) => {
   return (
-    <div className="cardstack-buttons flex flex-row items-center justify-center w-[430px] max-w-full px-6 md:px-8 gap-6 mt-4 mx-auto" style={{flex: '0 0 auto'}}>
+    <div className="cardstack-buttons flex flex-row items-center justify-center w-[430px] max-w-full px-6 md:px-8 gap-6 mx-auto" style={{flex: '0 0 auto'}}>
       {/* No Button */}
       <button
         className="flex-none w-20 h-20 bg-gradient-to-br from-red-400 to-pink-500 hover:from-red-500 hover:to-pink-600 active:from-red-600 active:to-pink-700 text-white font-bold rounded-full text-3xl shadow-xl hover:shadow-2xl transform hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-lg border-2 border-white/20 flex items-center justify-center focus:outline-none focus:ring-0"
