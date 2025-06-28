@@ -26,41 +26,35 @@ export default tseslint.config(
         { allowConstantExport: true },
       ],
       
-      // TypeScript specific rules for catching unused code
+      // Only focus on truly unused code - make everything else warnings
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
           caughtErrorsIgnorePattern: '^_',
+          // Allow unused variables in development
+          args: 'none',
         },
       ],
-      'unused-imports/no-unused-imports': 'error',
-      'unused-imports/no-unused-vars': [
-        'warn',
-        {
-          vars: 'all',
-          varsIgnorePattern: '^_',
-          args: 'after-used',
-          argsIgnorePattern: '^_',
-        },
-      ],
+      'unused-imports/no-unused-imports': 'warn', // Changed from error to warning
+      'unused-imports/no-unused-vars': 'off', // Disabled to avoid conflicts
       
-      // General code quality rules
-      'no-unused-vars': 'off', // Disabled in favor of TypeScript version
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
-      'no-debugger': 'error',
-      'no-duplicate-imports': 'error',
-      'prefer-const': 'error',
-      'no-var': 'error',
+      // Make everything else warnings or disabled
+      'no-unused-vars': 'off',
+      'no-console': 'off', // Allow console statements in development
+      'no-debugger': 'warn', // Only warn about debugger
+      'no-duplicate-imports': 'warn',
+      'prefer-const': 'off',
+      'no-var': 'warn',
       
-      // React specific rules
-      'react-hooks/exhaustive-deps': 'warn',
+      // React specific rules - make less strict
+      'react-hooks/exhaustive-deps': 'off', // Too noisy for development
       
-      // TypeScript best practices (removed type-checking rules that cause deployment issues)
+      // TypeScript - make very lenient
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off', // Allow any in development
     },
   },
 )

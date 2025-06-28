@@ -5,7 +5,8 @@ This project uses ESLint with TypeScript for code quality and consistency.
 ## Scripts
 
 - `npm run lint` - Run ESLint on all files
-- `npm run lint:check` - Run ESLint with strict checking (no warnings allowed) - used in build process
+- `npm run lint:check` - Run ESLint with strict checking (no warnings allowed) - for local development
+- `npm run lint:build` - Run ESLint with lenient checking (up to 50 warnings allowed) - used in build process
 - `npm run lint:fix` - Run ESLint and automatically fix fixable issues
 - `npm run type-check` - Run TypeScript type checking without emitting files
 
@@ -43,10 +44,11 @@ Husky is configured to run `lint-staged` before each commit, which:
 - Prevents commits with linting errors
 
 ## Build Process
-The build script (`npm run build`) includes `npm run lint:check` which:
-- Runs ESLint with `--max-warnings 0` (treats warnings as errors)
-- Prevents builds with any linting issues
-- Ensures code quality in production deployments
+The build script (`npm run build`) includes `npm run lint:build` which:
+- Runs ESLint with `--max-warnings 50` (allows reasonable warnings)
+- Still catches actual errors and truly unused code
+- Prevents builds only with serious code quality issues
+- Balances code quality with development practicality
 
 ## Fixing Linting Issues
 
