@@ -1,5 +1,20 @@
 [
     {
+        "version": "1.4.3",
+        "date": "2025-06-29",
+        "title": "ESLint Deployment Fix",
+        "changes": [
+            {
+                "type": "fixed",
+                "description": "Removed type-checking ESLint rules that caused Netlify deployment failures"
+            },
+            {
+                "type": "modified",
+                "description": "Optimized ESLint configuration for deployment environments"
+            }
+        ]
+    },
+    {
         "version": "1.4.2",
         "date": "2025-06-29",
         "title": "Enhanced Linting & Code Quality",

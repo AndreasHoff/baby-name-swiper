@@ -25,8 +25,7 @@ This project uses ESLint with TypeScript for code quality and consistency.
 
 ### TypeScript Best Practices
 - **No explicit any**: Warns when using `any` type
-- **Prefer nullish coalescing**: Enforces `??` over `||` when appropriate
-- **Prefer optional chaining**: Enforces `?.` syntax
+- **Type-safe linting**: Uses rules that don't require TypeScript project parsing (deployment-friendly)
 
 ## IDE Integration
 
