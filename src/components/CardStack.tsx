@@ -14,11 +14,11 @@ interface AnimationState {
 }
 
 // Debug interface
-interface DebugInfo {
+/* interface DebugInfo {
   topCardName: string | null;
   deckLength: number;
   animationState: string;
-}
+} */
 
 // Accept allNames and userVotes as props
 export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }: { allNames: any[], userVotes: Record<string, string>, otherUserVotes: Record<string, string>, currentUser: string, refreshUserVotes?: () => void }) {
