@@ -1,5 +1,3 @@
-/* Remove all Tailwind/PostCSS directives since Tailwind is now loaded via CDN. Keep only any custom CSS if needed, or leave empty. */
-
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;

@@ -1,6 +1,7 @@
 import { collection, getDocs } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase';
+import { getCategoriesForName, getCategoryById } from '../utils/nameCategories';
 
 // Accept allNames, userVotes, and currentUser as props
 export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string, string>; otherUserVotes: Record<string, string>; currentUser: string }> = ({ allNames, userVotes, otherUserVotes, currentUser }) => {
@@ -72,16 +73,43 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
           {pagedFavoriteNames.length === 0 && <li className="py-3 px-2 text-center text-gray-400">No favorites yet.</li>}
           {pagedFavoriteNames.map(n => {
             const isMatch = ['yes', 'favorite'].includes(userVotes[String(n.id)]) && ['yes', 'favorite'].includes(otherUserVotes[String(n.id)]);
+            const categories = n.categories || getCategoriesForName(n.name);
             return (
-              <li key={n.id} className="relative flex items-center py-3 px-2 bg-yellow-50 min-h-[48px]">
-                <span className="absolute left-2 text-yellow-500 font-bold flex items-center gap-1">FAVORITE <span role='img' aria-label='star'>⭐</span></span>
-                <span className="mx-auto font-semibold text-lg text-gray-900 text-center w-full">
-                  {n.name}
-                </span>
-                <span className={n.gender === 'boy' ? 'absolute right-2 text-sky-600 flex items-center gap-2' : 'absolute right-2 text-fuchsia-600 flex items-center gap-2'}>
-                  {n.gender}
-                  {isMatch && <span className="ml-2 text-xs font-bold text-amber-500 bg-amber-100 rounded px-2 py-0.5">match</span>}
-                </span>
+              <li key={n.id} className="relative flex flex-col py-3 px-2 bg-yellow-50 min-h-[48px]">
+                <div className="flex items-center">
+                  <span className="absolute left-2 text-yellow-500 font-bold flex items-center gap-1">FAVORITE <span role='img' aria-label='star'>⭐</span></span>
+                  <span className="mx-auto font-semibold text-lg text-gray-900 text-center w-full">
+                    {n.name}
+                  </span>
+                  <span className={
+                    n.gender === 'boy' ? 'absolute right-2 text-sky-600 flex items-center gap-2' : 
+                    n.gender === 'girl' ? 'absolute right-2 text-fuchsia-600 flex items-center gap-2' :
+                    'absolute right-2 text-purple-600 flex items-center gap-2'
+                  }>
+                    {n.gender}
+                    {isMatch && <span className="ml-2 text-xs font-bold text-amber-500 bg-amber-100 rounded px-2 py-0.5">match</span>}
+                  </span>
+                </div>
+                {categories.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1 mt-2">
+                    {categories.slice(0, 4).map((categoryId: string) => {
+                      const category = getCategoryById(categoryId);
+                      return category ? (
+                        <span 
+                          key={categoryId}
+                          className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200"
+                        >
+                          {category.name}
+                        </span>
+                      ) : null;
+                    })}
+                    {categories.length > 4 && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200">
+                        +{categories.length - 4} more
+                      </span>
+                    )}
+                  </div>
+                )}
               </li>
             );
           })}
@@ -112,16 +140,43 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
           {pagedYesNames.length === 0 && <li className="py-3 px-2 text-center text-gray-400">No yes yet.</li>}
           {pagedYesNames.map(n => {
             const isMatch = ['yes', 'favorite'].includes(userVotes[String(n.id)]) && ['yes', 'favorite'].includes(otherUserVotes[String(n.id)]);
+            const categories = n.categories || getCategoriesForName(n.name);
             return (
-              <li key={n.id} className="relative flex items-center py-3 px-2 bg-green-50 min-h-[48px]">
-                <span className="absolute left-2 text-green-600 font-bold">YES</span>
-                <span className="mx-auto font-semibold text-lg text-gray-900 text-center w-full">
-                  {n.name}
-                </span>
-                <span className={n.gender === 'boy' ? 'absolute right-2 text-sky-600 flex items-center gap-2' : 'absolute right-2 text-fuchsia-600 flex items-center gap-2'}>
-                  {n.gender}
-                  {isMatch && <span className="ml-2 text-xs font-bold text-amber-500 bg-amber-100 rounded px-2 py-0.5">match</span>}
-                </span>
+              <li key={n.id} className="relative flex flex-col py-3 px-2 bg-green-50 min-h-[48px]">
+                <div className="flex items-center">
+                  <span className="absolute left-2 text-green-600 font-bold">YES</span>
+                  <span className="mx-auto font-semibold text-lg text-gray-900 text-center w-full">
+                    {n.name}
+                  </span>
+                  <span className={
+                    n.gender === 'boy' ? 'absolute right-2 text-sky-600 flex items-center gap-2' : 
+                    n.gender === 'girl' ? 'absolute right-2 text-fuchsia-600 flex items-center gap-2' :
+                    'absolute right-2 text-purple-600 flex items-center gap-2'
+                  }>
+                    {n.gender}
+                    {isMatch && <span className="ml-2 text-xs font-bold text-amber-500 bg-amber-100 rounded px-2 py-0.5">match</span>}
+                  </span>
+                </div>
+                {categories.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1 mt-2">
+                    {categories.slice(0, 4).map((categoryId: string) => {
+                      const category = getCategoryById(categoryId);
+                      return category ? (
+                        <span 
+                          key={categoryId}
+                          className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 border border-green-200"
+                        >
+                          {category.name}
+                        </span>
+                      ) : null;
+                    })}
+                    {categories.length > 4 && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 border border-green-200">
+                        +{categories.length - 4} more
+                      </span>
+                    )}
+                  </div>
+                )}
               </li>
             );
           })}
@@ -156,7 +211,11 @@ export const NameListView: React.FC<{ allNames: any[]; userVotes: Record<string,
               <span className="mx-auto font-semibold text-lg text-gray-900 text-center w-full">
                 {n.name}
               </span>
-              <span className={n.gender === 'boy' ? 'absolute right-2 text-sky-600' : 'absolute right-2 text-fuchsia-600'}>{n.gender}</span>
+              <span className={
+                n.gender === 'boy' ? 'absolute right-2 text-sky-600' : 
+                n.gender === 'girl' ? 'absolute right-2 text-fuchsia-600' :
+                'absolute right-2 text-purple-600'
+              }>{n.gender}</span>
             </li>
           ))}
         </ul>

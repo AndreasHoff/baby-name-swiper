@@ -1,11 +1,12 @@
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Modal from 'react-modal';
 import { db } from '../firebase';
+import { getCategoriesForName, getCategoryById } from '../utils/nameCategories';
 import { SwipeButtons } from './SwipeButtons';
 
-const swipeConfidenceThreshold = 100; // px
+const swipeConfidenceThreshold = 80; // px - reduced for easier swiping
 const swipePower = (offset: number, velocity: number) => {
   return Math.abs(offset) * velocity;
 };
@@ -14,8 +15,6 @@ const swipePower = (offset: number, velocity: number) => {
 export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }: { allNames: any[], userVotes: Record<string, string>, otherUserVotes: Record<string, string>, currentUser: string, refreshUserVotes?: () => void }) {
   // Store the actual name objects, not just ids
   const [deck, setDeck] = useState<any[]>([]);
-  const dragging = useRef(false);
-  const [dragX, setDragX] = useState(0);
   const [animating, setAnimating] = useState<null | 'no' | 'favorite' | 'yes'>(null);
   const [leavingCard, setLeavingCard] = useState<any | null>(null);
   const [leavingCardId, setLeavingCardId] = useState<string | null>(null);
@@ -28,6 +27,15 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
   const [matchModal, setMatchModal] = useState<{ open: boolean, name: string | null }>({ open: false, name: null });
   // Track the last match type for modal styling
   const [lastMatchType, setLastMatchType] = useState<'yes' | 'favorite' | null>(null);
+
+  // Undo functionality - store the last action
+  const [lastAction, setLastAction] = useState<{
+    cardId: string;
+    cardName: string;
+    previousVote: string | null;
+    newVote: 'yes' | 'no' | 'favorite';
+    timestamp: number;
+  } | null>(null);
 
   // Build deck: filter out names with 'yes' or 'favorite' vote
   useEffect(() => {
@@ -73,6 +81,17 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
     const card = deck[0];
     if (!card) return;
     console.log('[CardStack] User voted', direction, 'for', card.name, card.id);
+    
+    // Store the previous vote for undo functionality
+    const previousVote = userVotes?.[card.id] || null;
+    setLastAction({
+      cardId: card.id,
+      cardName: card.name,
+      previousVote,
+      newVote: direction,
+      timestamp: Date.now()
+    });
+    
     if (direction === 'no' || direction === 'yes') {
       if (direction === 'no') addToNoOrder(currentUser, card.id);
       else removeFromNoOrder(currentUser, card.id);
@@ -82,7 +101,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
         setDeck((prev) => prev.slice(1));
         setLeavingCardId(null);
         setAnimating(null);
-      }, 700);
+      }, 500); // Reduced from 700ms to 500ms for faster animations
     } else if (direction === 'favorite') {
       removeFromNoOrder(currentUser, card.id);
       setLeavingCard(card);
@@ -105,7 +124,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
       const otherUser = currentUser === 'Andreas' ? 'Emilie' : 'Andreas';
       const userVote = updatedVotes[currentUser];
       const otherVote = updatedVotes[otherUser];
-      const isAMatch = ['yes', 'favorite'].includes(userVote) && ['yes', 'favorite'].includes(otherVote);
+      const isAMatch = !!(userVote && otherVote && ['yes', 'favorite'].includes(userVote) && ['yes', 'favorite'].includes(otherVote));
       await updateDoc(nameRef, { votes: updatedVotes, isAMatch });
       // --- End update ---
       if (refreshUserVotes) {
@@ -128,20 +147,90 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
     }, 10); // Delay to ensure deck state is updated
   };
 
+  // Undo function
+  const handleUndo = async () => {
+    if (!lastAction || !currentUser) return;
+    
+    // Check if the undo is recent (within 30 seconds)
+    const timeSinceAction = Date.now() - lastAction.timestamp;
+    if (timeSinceAction > 30000) {
+      console.log('[CardStack] Undo too old, ignoring');
+      setLastAction(null);
+      return;
+    }
+
+    console.log('[CardStack] Undoing last action:', lastAction);
+    
+    try {
+      // Find the card that was voted on
+      const cardToUndo = allNames.find(n => n.id === lastAction.cardId);
+      if (!cardToUndo) return;
+
+      // Restore the previous vote in Firestore
+      const userRef = doc(db, 'users', currentUser);
+      if (lastAction.previousVote) {
+        await updateDoc(userRef, { [`votes.${lastAction.cardId}`]: lastAction.previousVote });
+      } else {
+        // Remove the vote entirely if there was no previous vote
+        await updateDoc(userRef, { [`votes.${lastAction.cardId}`]: null });
+      }
+
+      // Update the name document votes
+      const nameRef = doc(db, 'baby-names', lastAction.cardId);
+      const nameSnap = await getDoc(nameRef);
+      const nameData = nameSnap.exists() ? nameSnap.data() : {};
+      const updatedVotes = { ...nameData.votes };
+      if (lastAction.previousVote) {
+        updatedVotes[currentUser] = lastAction.previousVote;
+      } else {
+        delete updatedVotes[currentUser];
+      }
+      
+      const otherUser = currentUser === 'Andreas' ? 'Emilie' : 'Andreas';
+      const userVote = updatedVotes[currentUser];
+      const otherVote = updatedVotes[otherUser];
+      const isAMatch = !!(userVote && otherVote && ['yes', 'favorite'].includes(userVote) && ['yes', 'favorite'].includes(otherVote));
+      await updateDoc(nameRef, { votes: updatedVotes, isAMatch });
+
+      // Handle sessionStorage no order
+      if (lastAction.newVote === 'no' && lastAction.previousVote !== 'no') {
+        removeFromNoOrder(currentUser, lastAction.cardId);
+      } else if (lastAction.previousVote === 'no' && lastAction.newVote !== 'no') {
+        addToNoOrder(currentUser, lastAction.cardId);
+      }
+
+      // Always add the undone card back to the top of the deck
+      // First remove it if it already exists in the deck
+      setDeck(prev => {
+        const filteredDeck = prev.filter(n => n.id !== lastAction.cardId);
+        return [cardToUndo, ...filteredDeck];
+      });
+
+      if (refreshUserVotes) {
+        refreshUserVotes();
+      }
+
+      console.log('[CardStack] Undo completed');
+      setLastAction(null);
+    } catch (e) {
+      console.error('[CardStack] Undo failed:', e);
+    }
+  };
+
   // Show a visible stack of up to 5 cards
   const stack = deck.slice(0, 5);
+  
+  // Simple animation variants - only for button clicks
   const animationVariants = {
     yes: {
-      x: [0, 60, 120, 300],
-      opacity: [1, 1, 0.8, 0],
-      boxShadow: '0 8px 24px 0 rgba(34,197,94,0.18)',
-      transition: { duration: 0.7, times: [0, 0.3, 0.7, 1], ease: 'easeInOut' }
+      x: 300,
+      opacity: 0,
+      transition: { duration: 0.5, ease: 'easeInOut' }
     },
     no: {
-      x: [0, -60, -120, -300],
-      opacity: [1, 1, 0.8, 0],
-      boxShadow: '0 8px 24px 0 rgba(239,68,68,0.18)',
-      transition: { duration: 0.7, times: [0, 0.3, 0.7, 1], ease: 'easeInOut' }
+      x: -300,
+      opacity: 0,
+      transition: { duration: 0.5, ease: 'easeInOut' }
     },
     favorite: {
       y: [0, -30, -80],
@@ -302,6 +391,33 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
             <span className="text-base sm:text-lg font-semibold uppercase tracking-widest px-4 py-2 rounded-full bg-white bg-opacity-40 mt-3 sm:mt-4 shadow text-fuchsia-700 border border-fuchsia-200">
               {leavingCard.gender}
             </span>
+            {/* Display categories for leaving card */}
+            {(() => {
+              const categories = leavingCard.categories || getCategoriesForName(leavingCard.name);
+              if (categories.length > 0) {
+                return (
+                  <div className="flex flex-wrap justify-center gap-1 mt-2 max-w-[280px]">
+                    {categories.slice(0, 3).map((categoryId: string) => {
+                      const category = getCategoryById(categoryId);
+                      return category ? (
+                        <span 
+                          key={categoryId}
+                          className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-30 text-fuchsia-600 border border-fuchsia-100"
+                        >
+                          {category.name}
+                        </span>
+                      ) : null;
+                    })}
+                    {categories.length > 3 && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-30 text-fuchsia-600 border border-fuchsia-100">
+                        +{categories.length - 3} more
+                      </span>
+                    )}
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </motion.div>
         )}
         {/* Card stack */}
@@ -318,7 +434,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
             const isTop = i === 0 && !isLeaving;
             const shouldAnimate = isLeaving;
             const transition = shouldAnimate
-              ? animationVariants[animating!]?.transition || { type: 'tween', duration: 0.35, ease: 'easeInOut' }
+              ? animationVariants[animating!]?.transition || { type: 'tween', duration: 0.5, ease: 'easeInOut' }
               : { type: 'spring', stiffness: 200, damping: 20 };
             return (
               <motion.div
@@ -332,42 +448,45 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
                 }}
                 exit={{ y: -40, opacity: 0, scale: 1 }}
                 transition={transition}
-                drag={isTop ? "x" : false}
-                dragConstraints={isTop ? { left: 0, right: 0 } : undefined}
-                dragElastic={isTop ? 0.8 : undefined}
-                onDragStart={isTop ? () => (dragging.current = true) : undefined}
-                onDragEnd={isTop ? (async (_, info) => {
-                  dragging.current = false;
-                  setDragX(0);
-                  const { offset, velocity } = info;
-                  const swipe = swipePower(offset.x, velocity.x);
-                  if (swipe < -swipeConfidenceThreshold) {
-                    await handleVote('no');
-                  } else if (swipe > swipeConfidenceThreshold) {
-                    await handleVote('yes');
-                  }
-                }) : undefined}
-                onDrag={isTop ? ((_, info) => setDragX(info.offset.x)) : undefined}
                 className={`cardstack-card bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200 text-fuchsia-900 rounded-3xl shadow-2xl px-4 py-5 w-full min-h-[90px] flex flex-col items-center justify-center border-4 border-white select-none absolute left-0 right-0 mx-auto pointer-events-none${isTop ? ' pointer-events-auto' : ''}`}
                 style={{
                   top: topPx,
                   zIndex,
                   boxShadow: `0 ${4 + i * 2}px ${16 - i * 2}px 0 rgba(0,0,0,0.10)`,
-                  background:
-                    isTop && dragX < -30
-                      ? 'linear-gradient(135deg, #fee2e2 0%, #fca5a5 100%)' // Red tint for NO
-                      : isTop && dragX > 30
-                      ? 'linear-gradient(135deg, #bbf7d0 0%, #4ade80 100%)' // Green tint for YES
-                      : undefined,
-                  transition: 'background 0.2s cubic-bezier(0.4,0,0.2,1)'
                 }}
-                whileTap={isTop ? { scale: 0.97 } : undefined}
-                whileDrag={isTop ? { rotate: dragX / 30 } : undefined}
+                whileTap={isTop ? { scale: 0.98 } : undefined}
               >
                 <span className="text-4xl sm:text-5xl font-extrabold mb-3 sm:mb-4 drop-shadow-lg text-center">{card.name}</span>
                 <span className="text-base sm:text-lg font-semibold uppercase tracking-widest px-4 py-2 rounded-full bg-white bg-opacity-40 mt-3 sm:mt-4 shadow text-fuchsia-700 border border-fuchsia-200">
                   {card.gender}
                 </span>
+                {/* Display categories */}
+                {(() => {
+                  const categories = card.categories || getCategoriesForName(card.name);
+                  if (categories.length > 0) {
+                    return (
+                      <div className="flex flex-wrap justify-center gap-1 mt-2 max-w-[280px]">
+                        {categories.slice(0, 3).map((categoryId: string) => {
+                          const category = getCategoryById(categoryId);
+                          return category ? (
+                            <span 
+                              key={categoryId}
+                              className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-30 text-fuchsia-600 border border-fuchsia-100"
+                            >
+                              {category.name}
+                            </span>
+                          ) : null;
+                        })}
+                        {categories.length > 3 && (
+                          <span className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-30 text-fuchsia-600 border border-fuchsia-100">
+                            +{categories.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 {isDev && (
                   <span
                     className="pointer-events-none select-none absolute left-1/2 bottom-2 -translate-x-1/2 text-xl font-extrabold text-gray-400 opacity-50 z-10 whitespace-nowrap"
@@ -407,7 +526,11 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
             {pagedAllNames.map(n => (
               <li key={n.id} className="py-2 px-2 flex items-center justify-between">
                 <span className="font-semibold text-lg">{n.name}</span>
-                <span className={n.gender === 'boy' ? 'text-sky-600' : 'text-fuchsia-600'}>{n.gender}</span>
+                <span className={
+                  n.gender === 'boy' ? 'text-sky-600' : 
+                  n.gender === 'girl' ? 'text-fuchsia-600' : 
+                  'text-purple-600'
+                }>{n.gender}</span>
               </li>
             ))}
           </ul>
@@ -441,6 +564,18 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
           </div>
         </div>
       </Modal>
+      {/* Undo Button - Show if there's a recent action */}
+      {lastAction && (Date.now() - lastAction.timestamp < 30000) && (
+        <div className="flex justify-center mb-4">
+          <button
+            onClick={handleUndo}
+            className="px-4 py-2 rounded-lg bg-gradient-to-br from-orange-400 to-red-400 text-white font-bold shadow hover:from-orange-500 hover:to-red-500 transition-all duration-200 flex items-center gap-2"
+          >
+            <span>↶</span>
+            Undo {lastAction.cardName}
+          </button>
+        </div>
+      )}
       {/* 4th Row: Voting Buttons - 3 Columns */}
       <div className="flex justify-center gap-6 sm:gap-8 mb-4 px-4">
         <SwipeButtons

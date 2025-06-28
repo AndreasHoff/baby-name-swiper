@@ -9,8 +9,9 @@ import { db } from './firebase';
 interface Name {
   id: string;
   name: string;
-  gender: 'boy' | 'girl';
+  gender: 'boy' | 'girl' | 'unisex';
   votes: Record<string, 'yes' | 'no' | 'favorite'>;
+  categories?: string[];
 }
 
 interface CenteredScreenProps {
@@ -114,7 +115,7 @@ function App() {
     setView('main');
   };
 
-  const handleNameAdded = async (name: string, gender: 'boy' | 'girl') => {
+  const handleNameAdded = async (name: string, gender: 'boy' | 'girl' | 'unisex') => {
     console.log('[App] Adding name:', name, gender);
     try {
       // Check for duplicate name (case-insensitive)

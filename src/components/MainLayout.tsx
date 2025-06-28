@@ -1,6 +1,8 @@
 import React from 'react';
 import { AddBabyName } from './AddBabyName';
+import { Analytics } from './Analytics';
 import { CardStack } from './CardStack';
+import { LinkNameExtractor } from './LinkNameExtractor';
 import { NameListView } from './NameListView';
 
 interface MainLayoutProps {
@@ -9,7 +11,7 @@ interface MainLayoutProps {
   userVotes: Record<string, string>;
   otherUserVotes: Record<string, string>;
   currentUser: string;
-  onNameAdded: (name: string, gender: 'boy' | 'girl') => void;
+  onNameAdded: (name: string, gender: 'boy' | 'girl' | 'unisex') => void;
   onLogout: () => void;
   refreshUserVotes?: () => void;
 }
@@ -39,6 +41,25 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         <div className="w-full max-w-[430px] mx-auto mt-8 px-0">
           <AddBabyName onNameAdded={onNameAdded} />
         </div>
+        
+        {/* Link Name Extractor */}
+        <div className="w-full max-w-[430px] mx-auto px-0">
+          <LinkNameExtractor 
+            onNamesExtracted={(names) => {
+              // Add each extracted name
+              names.forEach(({ name, gender }) => {
+                onNameAdded(name, gender);
+              });
+            }} 
+          />
+        </div>
+        
+        {/* Analytics for developers - only show in dev environment */}
+        {(import.meta.env.MODE === 'development' || import.meta.env.VITE_FIREBASE_PROJECT_ID?.includes('dev')) && (
+          <div className="w-full mt-8">
+            <Analytics />
+          </div>
+        )}
       </div>
     );
   }
