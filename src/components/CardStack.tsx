@@ -6,10 +6,7 @@ import { db } from '../firebase';
 import { getCategoriesForName, getCategoryById } from '../utils/nameCategories';
 import { SwipeButtons } from './SwipeButtons';
 
-const swipeConfidenceThreshold = 80; // px - reduced for easier swiping
-const swipePower = (offset: number, velocity: number) => {
-  return Math.abs(offset) * velocity;
-};
+
 
 // Accept allNames and userVotes as props
 export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }: { allNames: any[], userVotes: Record<string, string>, otherUserVotes: Record<string, string>, currentUser: string, refreshUserVotes?: () => void }) {
