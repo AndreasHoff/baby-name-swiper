@@ -84,7 +84,7 @@ export const LinkNameExtractor: React.FC<LinkNameExtractorProps> = ({ onNamesExt
     // Sort by confidence and filter
     return names
       .sort((a, b) => b.confidence - a.confidence)
-      .slice(0, 20); // Limit to top 20 names
+      .slice(0, 50); // Increased limit to top 50 names
   };
 
   const handleExtractNames = async () => {

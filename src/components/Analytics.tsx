@@ -90,7 +90,7 @@ export const Analytics: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-6">
+    <div className="w-full max-w-4xl mx-auto">
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/40 p-6">
         <h2 className="text-2xl font-bold text-fuchsia-700 mb-6 text-center">📊 Analytics Dashboard</h2>
         

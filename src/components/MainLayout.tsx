@@ -2,7 +2,7 @@ import React from 'react';
 import { AddBabyName } from './AddBabyName';
 import { Analytics } from './Analytics';
 import { CardStack } from './CardStack';
-import { LinkNameExtractor } from './LinkNameExtractor';
+// import { LinkNameExtractor } from './LinkNameExtractor'; // TEMPORARILY DISABLED
 import { NameListView } from './NameListView';
 
 interface MainLayoutProps {
@@ -11,7 +11,14 @@ interface MainLayoutProps {
   userVotes: Record<string, string>;
   otherUserVotes: Record<string, string>;
   currentUser: string;
-  onNameAdded: (name: string, gender: 'boy' | 'girl' | 'unisex') => void;
+  onNameAdded: (nameObject: {
+    name: string;
+    gender: 'boy' | 'girl' | 'unisex';
+    hasSpecialChars: boolean;
+    source: string;
+    nameLength: number;
+    categories: string[];
+  }) => void;
   onLogout: () => void;
   refreshUserVotes?: () => void;
 }
@@ -42,17 +49,26 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           <AddBabyName onNameAdded={onNameAdded} />
         </div>
         
-        {/* Link Name Extractor */}
+        {/* Link Name Extractor - TEMPORARILY DISABLED */}
+        {/* 
         <div className="w-full max-w-[430px] mx-auto px-0">
           <LinkNameExtractor 
             onNamesExtracted={(names) => {
               // Add each extracted name
               names.forEach(({ name, gender }) => {
-                onNameAdded(name, gender);
+                onNameAdded({
+                  name: name,
+                  gender: gender,
+                  hasSpecialChars: /[^a-zA-ZæøåÆØÅ\s-']/.test(name.trim()),
+                  source: 'link',
+                  nameLength: name.trim().length,
+                  categories: [] // No categories selected for link-extracted names
+                });
               });
             }} 
           />
         </div>
+        */}
         
         {/* Analytics for developers - only show in dev environment */}
         {(import.meta.env.MODE === 'development' || import.meta.env.VITE_FIREBASE_PROJECT_ID?.includes('dev')) && (

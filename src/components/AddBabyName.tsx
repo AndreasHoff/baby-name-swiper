@@ -2,7 +2,14 @@ import React, { useState } from 'react';
 import { NAME_CATEGORIES, getCategoriesForName } from '../utils/nameCategories';
 
 interface AddBabyNameProps {
-  onNameAdded: (name: string, gender: 'boy' | 'girl' | 'unisex') => void;
+  onNameAdded: (nameObject: {
+    name: string;
+    gender: 'boy' | 'girl' | 'unisex';
+    hasSpecialChars: boolean;
+    source: string;
+    nameLength: number;
+    categories: string[];
+  }) => void;
 }
 
 export const AddBabyName: React.FC<AddBabyNameProps> = ({ onNameAdded }) => {
@@ -61,8 +68,15 @@ export const AddBabyName: React.FC<AddBabyNameProps> = ({ onNameAdded }) => {
       hasSpecialChars: /[^a-zA-ZæøåÆØÅ\s-']/.test(name.trim()), // analytics: special characters
       categories: selectedCategories, // selected categories
     };
-    // Pass the name and gender as before, but also log the full object for now
-    if (onNameAdded) onNameAdded(newName.name, newName.gender);
+    // Pass the full object with analytics data
+    if (onNameAdded) onNameAdded({
+      name: newName.name,
+      gender: newName.gender,
+      hasSpecialChars: newName.hasSpecialChars,
+      source: newName.source,
+      nameLength: newName.nameLength,
+      categories: newName.categories
+    });
     // Optionally: send newName to Firestore here if needed
     console.log('[AddBabyName] Full new name object:', newName);
     setName('');

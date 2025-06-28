@@ -12,6 +12,8 @@ interface Name {
   gender: 'boy' | 'girl' | 'unisex';
   votes: Record<string, 'yes' | 'no' | 'favorite'>;
   categories?: string[];
+  created?: string; // Timestamp for when the name was added
+  createdAt?: string; // Alternative timestamp field name
 }
 
 interface CenteredScreenProps {
@@ -115,31 +117,44 @@ function App() {
     setView('main');
   };
 
-  const handleNameAdded = async (name: string, gender: 'boy' | 'girl' | 'unisex') => {
-    console.log('[App] Adding name:', name, gender);
+  const handleNameAdded = async (nameObject: {
+    name: string;
+    gender: 'boy' | 'girl' | 'unisex';
+    hasSpecialChars: boolean;
+    source: string;
+    nameLength: number;
+    categories: string[];
+  }) => {
+    console.log('[App] Adding name:', nameObject.name, nameObject.gender);
     try {
       // Check for duplicate name (case-insensitive)
-      const q = query(collection(db, 'baby-names'), where('name', '==', name));
+      const q = query(collection(db, 'baby-names'), where('name', '==', nameObject.name));
       const querySnapshot = await getDocs(q);
       if (!querySnapshot.empty) {
-        setAddErrorName(name);
+        setAddErrorName(nameObject.name);
         setShowAddError(true);
         setTimeout(() => setShowAddError(false), 2000);
         return;
       }
       const docRef = await addDoc(collection(db, 'baby-names'), {
-        name: name,
-        gender: gender,
-        votes: {}
+        name: nameObject.name,
+        gender: nameObject.gender,
+        votes: {},
+        created: new Date().toISOString(), // Add timestamp for sorting
+        hasSpecialChars: nameObject.hasSpecialChars, // Analytics field
+        source: nameObject.source, // Analytics field
+        nameLength: nameObject.nameLength, // Analytics field
+        categories: nameObject.categories // Selected categories
       });
       const newName: Name = {
         id: docRef.id,
-        name: name,
-        gender: gender,
-        votes: {}
+        name: nameObject.name,
+        gender: nameObject.gender,
+        votes: {},
+        created: new Date().toISOString() // Add timestamp to local object too
       };
       setAllNames(prev => [...prev, newName]);
-      setLastAddedName(name);
+      setLastAddedName(nameObject.name);
       setShowAddSuccess(true);
       setTimeout(() => {
         setShowAddSuccess(false);

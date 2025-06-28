@@ -61,10 +61,21 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
       const vote = userVotes?.[n.id];
       return vote !== 'yes' && vote !== 'favorite';
     });
+    
     // Reorder deck so names in sessionStorage 'no' order are at the end
     const noOrder = getNoOrder(currentUser);
     const inNoOrder = unvoted.filter(n => noOrder.includes(n.id));
     const notInNoOrder = unvoted.filter(n => !noOrder.includes(n.id));
+    
+    // Sort notInNoOrder to put recently added names first
+    // Names with 'created' or 'createdAt' timestamps appear first, newest first
+    notInNoOrder.sort((a, b) => {
+      const aTime = a.created || a.createdAt || '0';
+      const bTime = b.created || b.createdAt || '0';
+      // Sort descending (newest first)
+      return bTime.localeCompare(aTime);
+    });
+    
     // Keep the order of noOrder for those names
     inNoOrder.sort((a, b) => noOrder.indexOf(a.id) - noOrder.indexOf(b.id));
     setDeckData([...notInNoOrder, ...inNoOrder]);
@@ -586,6 +597,12 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
           );
         })}
         </div>
+      </div>
+      {/* Remaining Names Count */}
+      <div className="flex justify-center mb-4">
+        <p className="text-center text-fuchsia-700 font-semibold text-sm">
+          {deckData.length} name{deckData.length !== 1 ? 's' : ''} remaining
+        </p>
       </div>
       {/* Modal for all names */}
       <Modal
