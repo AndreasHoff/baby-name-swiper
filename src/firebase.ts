@@ -14,6 +14,11 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
+// Log environment info for debugging
+console.log('[Firebase] Environment:', import.meta.env.MODE);
+console.log('[Firebase] Project ID:', firebaseConfig.projectId);
+console.log('[Firebase] API Key exists:', !!firebaseConfig.apiKey);
+
 // Only initialize if not already initialized
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
