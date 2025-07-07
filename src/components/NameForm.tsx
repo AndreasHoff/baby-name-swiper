@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
 
-// Define Gender type locally since store.ts is obsolete
-export type Gender = 'boy' | 'girl';
+// Define Gender type to include unisex
+export type Gender = 'boy' | 'girl' | 'unisex';
 
 // GenderRadioGroup component
 const GenderRadioGroup: React.FC<{
   gender: Gender;
   setGender: (g: Gender) => void;
 }> = ({ gender, setGender }) => (
-  <div className="flex gap-4 justify-center w-full">
-    <label className="flex items-center gap-1 text-fuchsia-600 font-semibold">
+  <div className="flex gap-3 justify-center w-full">
+    <label className="flex items-center gap-1 text-sky-600 font-semibold">
       <input type="radio" name="gender" value="boy" checked={gender === 'boy'} onChange={() => setGender('boy')} className="accent-sky-500" /> Boy
     </label>
-    <label className="flex items-center gap-1 text-sky-600 font-semibold">
+    <label className="flex items-center gap-1 text-fuchsia-600 font-semibold">
       <input type="radio" name="gender" value="girl" checked={gender === 'girl'} onChange={() => setGender('girl')} className="accent-fuchsia-500" /> Girl
+    </label>
+    <label className="flex items-center gap-1 text-purple-600 font-semibold">
+      <input type="radio" name="gender" value="unisex" checked={gender === 'unisex'} onChange={() => setGender('unisex')} className="accent-purple-500" /> Unisex
     </label>
   </div>
 );
@@ -34,8 +37,18 @@ const NameInput: React.FC<{
 
 export const NameForm: React.FC<{ onNameAdded?: (name?: string) => void }> = ({ onNameAdded }) => {
   const [name, setName] = useState('');
-  const [gender, setGender] = useState<Gender>('boy');
+  // Get persistent gender from localStorage or default to 'boy'
+  const [gender, setGender] = useState<Gender>(() => {
+    const savedGender = localStorage.getItem('lastSelectedGender');
+    return (savedGender === 'boy' || savedGender === 'girl' || savedGender === 'unisex') ? savedGender : 'boy';
+  });
   const [error, setError] = useState<string | null>(null);
+
+  // Save gender preference when it changes
+  const handleGenderChange = (newGender: Gender) => {
+    setGender(newGender);
+    localStorage.setItem('lastSelectedGender', newGender);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +94,7 @@ export const NameForm: React.FC<{ onNameAdded?: (name?: string) => void }> = ({ 
       </div>
       <form onSubmit={handleSubmit} className="cardstack-form flex flex-col items-center justify-center w-[430px] max-w-full px-4 md:px-8 gap-3 mt-3 mx-auto" style={{flex: '0 0 auto'}}>
         <NameInput name={name} setName={setName} />
-        <GenderRadioGroup gender={gender} setGender={setGender} />
+        <GenderRadioGroup gender={gender} setGender={handleGenderChange} />
         <button type="submit" className="bg-gradient-to-br from-fuchsia-400 to-sky-400 hover:from-fuchsia-500 hover:to-sky-500 text-white px-4 py-2 rounded-lg mt-2 font-bold shadow transition-all duration-200 w-full">Add Name</button>
       </form>
     </>

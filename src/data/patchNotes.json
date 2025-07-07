@@ -1,0 +1,202 @@
+[
+    {
+        "version": "1.4.3",
+        "date": "2025-06-29",
+        "title": "ESLint Deployment Fix",
+        "changes": [
+            {
+                "type": "fixed",
+                "description": "Removed type-checking ESLint rules that caused Netlify deployment failures"
+            },
+            {
+                "type": "modified",
+                "description": "Optimized ESLint configuration for deployment environments"
+            }
+        ]
+    },
+    {
+        "version": "1.4.2",
+        "date": "2025-06-29",
+        "title": "Enhanced Linting & Code Quality",
+        "changes": [
+            {
+                "type": "added",
+                "description": "Comprehensive ESLint configuration with TypeScript rules"
+            },
+            {
+                "type": "added",
+                "description": "Automated detection of unused variables, functions, and imports"
+            },
+            {
+                "type": "added",
+                "description": "Pre-commit hooks to prevent committing code with linting errors"
+            },
+            {
+                "type": "added",
+                "description": "VS Code integration with automatic fixing on save"
+            },
+            {
+                "type": "modified",
+                "description": "Build process now includes strict linting checks before deployment"
+            }
+        ]
+    },
+    {
+        "version": "1.4.1",
+        "date": "2025-06-29",
+        "title": "Patch Notes Visibility Update",
+        "changes": [
+            {
+                "type": "modified",
+                "description": "Patch Notes now visible in both development and production environments"
+            },
+            {
+                "type": "modified",
+                "description": "Analytics dashboard remains exclusive to development environment"
+            }
+        ]
+    },
+    {
+        "version": "1.4.0",
+        "date": "2025-01-22",
+        "title": "Patch Notes System",
+        "changes": [
+            {
+                "type": "added",
+                "description": "Patch Notes card in settings tab for production users"
+            },
+            {
+                "type": "added",
+                "description": "Historical patch tracking with expandable view for previous updates"
+            },
+            {
+                "type": "modified",
+                "description": "Settings tab now shows Analytics only in development, Patch Notes in production"
+            },
+            {
+                "type": "added",
+                "description": "Structured patch history with change type categorization (added/removed/modified/fixed)"
+            }
+        ]
+    },
+    {
+        "version": "1.3.0",
+        "date": "2025-06-28",
+        "title": "Database Optimization & Cleanup",
+        "changes": [
+            {
+                "type": "added",
+                "description": "Single deduplicated name source (allNames.json) with 291 unique names"
+            },
+            {
+                "type": "added",
+                "description": "Improved tag system with automatic assignment based on name characteristics"
+            },
+            {
+                "type": "added",
+                "description": "Environment-aware database reset scripts with dev/prod safety measures"
+            },
+            {
+                "type": "removed",
+                "description": "Duplicate name files and redundant sample data (removed 547 duplicates)"
+            },
+            {
+                "type": "modified",
+                "description": "Simplified resetDatabase script - now uses single import source"
+            },
+            {
+                "type": "modified",
+                "description": "Enhanced importNames script with comprehensive tag assignment logic"
+            }
+        ]
+    },
+    {
+        "version": "1.2.0",
+        "date": "2025-06-27",
+        "title": "Tag System Implementation",
+        "changes": [
+            {
+                "type": "added",
+                "description": "Firestore-backed tag system replacing hardcoded categories"
+            },
+            {
+                "type": "added",
+                "description": "Tag creation and selection in AddBabyName component"
+            },
+            {
+                "type": "added",
+                "description": "Tag display in card stack with up to 6 tags per name"
+            },
+            {
+                "type": "added",
+                "description": "Tag cache management for instant UI updates"
+            },
+            {
+                "type": "modified",
+                "description": "CardStack component to use Firestore tags instead of legacy categories"
+            },
+            {
+                "type": "removed",
+                "description": "Legacy hardcoded category system"
+            }
+        ]
+    },
+    {
+        "version": "1.1.0",
+        "date": "2025-06-26",
+        "title": "Enhanced UI & Animation System",
+        "changes": [
+            {
+                "type": "added",
+                "description": "Framer Motion animations for smooth card transitions"
+            },
+            {
+                "type": "added",
+                "description": "Always-visible category picker in AddBabyName"
+            },
+            {
+                "type": "added",
+                "description": "Reset My Votes functionality for development environment"
+            },
+            {
+                "type": "modified",
+                "description": "CardStack to always show 5 cards with improved state management"
+            },
+            {
+                "type": "modified",
+                "description": "Separated deck data and animation state for better performance"
+            },
+            {
+                "type": "fixed",
+                "description": "Firestore undo logic and session storage bugs"
+            }
+        ]
+    },
+    {
+        "version": "1.0.0",
+        "date": "2025-06-25",
+        "title": "Initial Release",
+        "changes": [
+            {
+                "type": "added",
+                "description": "Baby name swiping interface with card stack"
+            },
+            {
+                "type": "added",
+                "description": "Firebase authentication and Firestore integration"
+            },
+            {
+                "type": "added",
+                "description": "Analytics dashboard for developers"
+            },
+            {
+                "type": "added",
+                "description": "Name list view with voting status"
+            },
+            {
+                "type": "added",
+                "description": "Add new names functionality"
+            }
+        ]
+    }
+]

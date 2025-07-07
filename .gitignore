@@ -24,4 +24,11 @@ dist-ssr
 *.sw?
 
 # Firebase service account key (DO NOT COMMIT)
-serviceAccountKey.json
+serviceAccountKey.prod.json
+serviceAccountKey.dev.json
+
+
+# Environment files
+.env
+.env.development
+.env.production
