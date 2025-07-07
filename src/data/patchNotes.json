@@ -1,5 +1,28 @@
 [
     {
+        "version": "1.5.0",
+        "date": "2025-07-08",
+        "title": "Environment Detection & Firebase Configuration",
+        "changes": [
+            {
+                "type": "fixed",
+                "description": "Fixed production Firebase authentication with proper environment variable configuration"
+            },
+            {
+                "type": "fixed",
+                "description": "Fixed Reset Votes button not appearing in dev deployment"
+            },
+            {
+                "type": "added",
+                "description": "Improved environment detection for localhost, dev, and production deployments"
+            },
+            {
+                "type": "modified",
+                "description": "Analytics and Reset Votes now properly show in both localhost and dev environments"
+            }
+        ]
+    },
+    {
         "version": "1.4.3",
         "date": "2025-06-29",
         "title": "ESLint Deployment Fix",
