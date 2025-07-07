@@ -149,8 +149,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           </div>
         )}
 
-        {/* Patch Notes - show in both dev and production environments */}
-        <PatchNotesCard />
+        {/* Patch Notes - only show in dev environments */}
+        {isDevEnv && <PatchNotesCard />}
       </div>
     );
   }
