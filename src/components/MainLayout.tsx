@@ -26,42 +26,66 @@ interface MainLayoutProps {
   refreshUserVotes?: () => void;
 }
 
-export const MainLayout: React.FC<MainLayoutProps> = ({ 
-  currentView, 
-  allNames, 
+export const MainLayout: React.FC<MainLayoutProps> = ({
+  currentView,
+  allNames,
   userVotes,
   otherUserVotes,
-  currentUser, 
+  currentUser,
   onNameAdded,
   onLogout,
   refreshUserVotes
 }) => {
   const [isResettingVotes, setIsResettingVotes] = useState(false);
 
+  // Environment detection helper
+  const isDevelopmentEnvironment = () => {
+    // localhost (local development)
+    if (import.meta.env.MODE === 'development') return true;
+
+    // dev deployment (uses dev Firebase project)
+    if (import.meta.env.VITE_FIREBASE_PROJECT_ID?.includes('dev')) return true;
+
+    // dev deployment (URL-based detection as fallback)
+    if (typeof window !== 'undefined' && window.location.hostname.includes('-dev.')) return true;
+
+    return false;
+  };
+
+  const isDevEnv = isDevelopmentEnvironment();
+
+  // Debug log to help troubleshoot
+  console.log('[MainLayout] Environment detection:', {
+    mode: import.meta.env.MODE,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    hostname: typeof window !== 'undefined' ? window.location.hostname : 'server',
+    isDevEnv
+  });
+
   // Reset user votes function
   const handleResetVotes = async () => {
     if (!currentUser || isResettingVotes) return;
-    
+
     const confirmReset = window.confirm(
       'Are you sure you want to clear ALL your votes? This action cannot be undone.'
     );
-    
+
     if (!confirmReset) return;
-    
+
     setIsResettingVotes(true);
-    
+
     try {
       console.log('[MainLayout] Resetting votes for user:', currentUser);
       const userRef = doc(db, 'users', currentUser);
       await updateDoc(userRef, { votes: {} });
-      
+
       console.log('[MainLayout] Votes reset successfully');
-      
+
       // Refresh user votes to update the UI
       if (refreshUserVotes) {
         refreshUserVotes();
       }
-      
+
       alert('Your votes have been reset successfully!');
     } catch (error) {
       console.error('[MainLayout] Error resetting votes:', error);
@@ -81,9 +105,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           >
             Log out
           </button>
-          
-          {/* Reset Votes Button - Only in development */}
-          {(import.meta.env.MODE === 'development' || import.meta.env.VITE_FIREBASE_PROJECT_ID?.includes('dev')) && (
+
+          {/* Reset Votes Button - Only in development and dev environments */}
+          {isDevEnv && (
             <button
               onClick={handleResetVotes}
               disabled={isResettingVotes}
@@ -96,7 +120,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         <div className="w-full max-w-[430px] mx-auto mt-8 px-0">
           <AddBabyName onNameAdded={onNameAdded} />
         </div>
-        
+
         {/* Link Name Extractor - TEMPORARILY DISABLED */}
         {/* 
         <div className="w-full max-w-[430px] mx-auto px-0">
@@ -117,14 +141,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           />
         </div>
         */}
-        
-        {/* Analytics for developers - only show in dev environment */}
-        {(import.meta.env.MODE === 'development' || import.meta.env.VITE_FIREBASE_PROJECT_ID?.includes('dev')) && (
+
+        {/* Analytics for developers - only show in dev environments */}
+        {isDevEnv && (
           <div className="w-full mt-8">
             <Analytics />
           </div>
         )}
-        
+
         {/* Patch Notes - show in both dev and production environments */}
         <PatchNotesCard />
       </div>
