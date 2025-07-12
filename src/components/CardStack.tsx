@@ -26,10 +26,13 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
   const [deckData, setDeckData] = useState<any[]>([]);
   const [transitioningCard, setTransitioningCard] = useState<any | null>(null);
   const [animationState, setAnimationState] = useState<AnimationState>({ type: null, cardId: null });
-  
+
   // Tags state for proper tag display
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
-  
+
+  // Gender filter state
+  const [genderFilter, setGenderFilter] = useState<'all' | 'boy' | 'girl' | 'unisex'>('all');
+
   // Modal and UI state
   const [showAllModal, setShowAllModal] = useState(false);
   const [allPage, setAllPage] = useState(0);
@@ -58,19 +61,24 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
     animationState: animationState?.type ? `${animationState.type} (${animationState.cardId || 'unknown'})` : 'idle'
   }; */
 
-  // Build deck: filter out names with 'yes' or 'favorite' vote
+  // Build deck: filter out names with 'yes' or 'favorite' vote and apply gender filter
   useEffect(() => {
     if (!currentUser) return;
     const unvoted = allNames.filter((n) => {
       const vote = userVotes?.[n.id];
-      return vote !== 'yes' && vote !== 'favorite';
+      const hasVote = vote === 'yes' || vote === 'favorite';
+
+      // Apply gender filter
+      const genderMatch = genderFilter === 'all' || n.gender === genderFilter;
+
+      return !hasVote && genderMatch;
     });
-    
+
     // Reorder deck so names in sessionStorage 'no' order are at the end
     const noOrder = getNoOrder(currentUser);
     const inNoOrder = unvoted.filter(n => noOrder.includes(n.id));
     const notInNoOrder = unvoted.filter(n => !noOrder.includes(n.id));
-    
+
     // Sort notInNoOrder to put recently added names first
     // Names with 'created' or 'createdAt' timestamps appear first, newest first
     notInNoOrder.sort((a, b) => {
@@ -79,11 +87,17 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
       // Sort descending (newest first)
       return bTime.localeCompare(aTime);
     });
-    
+
     // Keep the order of noOrder for those names
     inNoOrder.sort((a, b) => noOrder.indexOf(a.id) - noOrder.indexOf(b.id));
     setDeckData([...notInNoOrder, ...inNoOrder]);
-  }, [allNames, userVotes, currentUser]);
+
+    console.log('[CardStack] Deck built with filter:', {
+      filter: genderFilter,
+      total: [...notInNoOrder, ...inNoOrder].length,
+      unfiltered: allNames.length
+    });
+  }, [allNames, userVotes, currentUser, genderFilter]);
 
   // Load tags for proper tag display
   useEffect(() => {
@@ -96,7 +110,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
         console.error('[CardStack] Error loading tags:', error);
       }
     };
-    
+
     loadTags();
   }, [allNames]); // Reload tags when allNames changes (in case new tags were created)
 
@@ -111,7 +125,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
       const elapsed = Date.now() - lastAction.timestamp;
       const remaining = Math.max(0, 10000 - elapsed);
       const secondsLeft = Math.ceil(remaining / 1000);
-      
+
       if (secondsLeft <= 0) {
         setUndoCountdown(0);
         setLastAction(null); // Clear the action when countdown reaches 0
@@ -156,9 +170,9 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
   const handleVote = async (direction: 'yes' | 'no' | 'favorite') => {
     const card = deckData[0];
     if (!card || animationState.type !== null) return; // Prevent double-voting during animation
-    
+
     console.log('[CardStack] User voted', direction, 'for', card.name, card.id);
-    
+
     // Store the previous vote for undo functionality
     const previousVote = userVotes?.[card.id] || null;
     setLastAction({
@@ -184,7 +198,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
     try {
       const userRef = doc(db, 'users', currentUser);
       await updateDoc(userRef, { [`votes.${card.id}`]: direction });
-      
+
       // Update votes map on the baby name document
       const nameRef = doc(db, 'baby-names', card.id);
       const nameSnap = await getDoc(nameRef);
@@ -195,11 +209,11 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
       const otherVote = updatedVotes[otherUser];
       const isAMatch = !!(userVote && otherVote && ['yes', 'favorite'].includes(userVote) && ['yes', 'favorite'].includes(otherVote));
       await updateDoc(nameRef, { votes: updatedVotes, isAMatch });
-      
+
       if (refreshUserVotes) {
         refreshUserVotes();
       }
-      
+
       // Show match modal if a match is detected after this vote
       if (['yes', 'favorite'].includes(direction) && isAMatch) {
         setLastMatchType(direction === 'yes' ? 'yes' : 'favorite');
@@ -207,7 +221,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
           setMatchModal({ open: true, name: card.name });
         }, 500);
       }
-      
+
       console.log('[CardStack] Firestore updated for', card.name, 'with', direction);
     } catch (e) {
       console.error('[CardStack] Firestore update failed:', e);
@@ -217,16 +231,16 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
   // Handle animation completion - this removes the card from deck
   const handleAnimationComplete = () => {
     if (!transitioningCard) return;
-    
+
     console.log('[CardStack] Animation completed for', transitioningCard.name);
-    
+
     const cardId = transitioningCard.id;
-    
+
     // Batch all state updates together to prevent multiple re-renders
     setDeckData(prev => prev.filter(card => card.id !== cardId));
     setTransitioningCard(null);
     setAnimationState({ type: null, cardId: null });
-    
+
     // Log the current deck order (names only) - use cardId from closure
     setTimeout(() => {
       console.log('[CardStack] Deck after vote: animation complete');
@@ -236,7 +250,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
   // Undo function - updated for new state structure
   const handleUndo = async () => {
     if (!lastAction || !currentUser) return;
-    
+
     // Check if the undo is recent (within 30 seconds)
     const timeSinceAction = Date.now() - lastAction.timestamp;
     if (timeSinceAction > 30000) {
@@ -246,7 +260,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
     }
 
     console.log('[CardStack] Undoing last action:', lastAction);
-    
+
     try {
       // Find the card that was voted on
       const cardToUndo = allNames.find(n => n.id === lastAction.cardId);
@@ -271,7 +285,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
       } else {
         delete updatedVotes[currentUser];
       }
-      
+
       const otherUser = currentUser === 'Andreas' ? 'Emilie' : 'Andreas';
       const userVote = updatedVotes[currentUser];
       const otherVote = updatedVotes[otherUser];
@@ -313,7 +327,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
     isPlaceholder: true
   }));
   const stack = [...realCards, ...placeholderCards];
-  
+
   // Simple animation variants - only for button clicks
   const animationVariants = {
     yes: {
@@ -344,12 +358,12 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
   if (deckData.length === 0 && !transitioningCard) {
     return (
       <div className="w-full flex flex-col items-center justify-center min-h-[300px] p-6">
-        <div className="text-3xl sm:text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 via-amber-400 to-sky-400 drop-shadow-lg text-center mb-4 flex items-center justify-center gap-2" style={{letterSpacing: '0.01em'}}>
-          <span role="img" aria-label="heart" className="text-4xl align-middle" style={{verticalAlign: 'middle'}}>💖</span>
+        <div className="text-3xl sm:text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 via-amber-400 to-sky-400 drop-shadow-lg text-center mb-4 flex items-center justify-center gap-2" style={{ letterSpacing: '0.01em' }}>
+          <span role="img" aria-label="heart" className="text-4xl align-middle" style={{ verticalAlign: 'middle' }}>💖</span>
           No more names.
         </div>
-        <div className="text-lg sm:text-xl font-semibold text-center max-w-md bg-clip-text text-transparent bg-gradient-to-r from-sky-500 via-fuchsia-400 to-amber-400 drop-shadow" style={{lineHeight: 1.5}}>
-          Please contact your boyfriend and let him know that you love and support him<br/>and want him to add more features to this lovely app.
+        <div className="text-lg sm:text-xl font-semibold text-center max-w-md bg-clip-text text-transparent bg-gradient-to-r from-sky-500 via-fuchsia-400 to-amber-400 drop-shadow" style={{ lineHeight: 1.5 }}>
+          Please contact your boyfriend and let him know that you love and support him<br />and want him to add more features to this lovely app.
         </div>
       </div>
     );
@@ -470,118 +484,59 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
       )}
       {/* 1st Row: Headline */}
       <div className="flex justify-center px-4">
-        <h1 className="text-3xl sm:text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-fuchsia-400 to-amber-400 drop-shadow-lg text-center flex items-center justify-center gap-2" style={{letterSpacing: '0.01em'}}>
-          <span role="img" aria-label="baby" className="text-4xl sm:text-xl align-middle text-black bg-none" style={{color: '#222', background: 'none'}}>👶</span>
+        <h1 className="text-3xl sm:text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-fuchsia-400 to-amber-400 drop-shadow-lg text-center flex items-center justify-center gap-2" style={{ letterSpacing: '0.01em' }}>
+          <span role="img" aria-label="baby" className="text-4xl sm:text-xl align-middle text-black bg-none" style={{ color: '#222', background: 'none' }}>👶</span>
           <span className="leading-tight">Baby Name Swiper</span>
         </h1>
+      </div>
+
+      {/* Gender Filter */}
+      <div className="flex justify-center px-4 mt-4 mb-4">
+        <div className="flex bg-white bg-opacity-60 rounded-full p-1 shadow-lg border border-white border-opacity-40">
+          {[
+            { value: 'all', label: 'All', emoji: '👶'},
+            { value: 'boy', label: 'Boys', emoji: '👦'},
+            { value: 'girl', label: 'Girls', emoji: '👧'},
+          ].map((option) => (
+            <button
+              key={option.value}
+              onClick={() => setGenderFilter(option.value as typeof genderFilter)}
+              className={`px-3 py-2 rounded-full text-sm font-semibold transition-all duration-200 flex items-center gap-1 ${genderFilter === option.value
+                  ? 'bg-gradient-to-br from-fuchsia-400 to-sky-400 text-white shadow-md'
+                  : 'text-fuchsia-700 hover:bg-white hover:bg-opacity-40'
+                }`}
+            >
+              <span className="hidden sm:inline">{option.label}</span>
+              <span className="sm:hidden">{option.label.slice(0, 5)}</span>
+              <span className="sm:hidden">{option.emoji}</span>
+            </button>
+          ))}
+        </div>
       </div>
       {/* 2nd Row: Card Stack */}
       <div className="flex justify-center relative px-4" style={{ minHeight: '300px', width: '100%' }}>
         <div className="relative w-full max-w-sm" style={{ height: '300px' }}>
-        {/* Transitioning card for animations */}
-        {transitioningCard && animationState.type && (
-          <motion.div
-            key={transitioningCard.id + '-transitioning'}
-            initial={{ y: 0, scale: 1, opacity: 1, x: 0 }}
-            animate={animationVariants[animationState.type]}
-            onAnimationComplete={handleAnimationComplete}
-            className={`cardstack-card bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200 text-fuchsia-900 rounded-3xl shadow-2xl px-4 py-4 w-full min-h-[90px] flex flex-col items-center justify-start border-4 border-white select-none absolute left-0 right-0 mx-auto pointer-events-none`}
-            style={{
-              top: 0,
-              zIndex: 99,
-              boxShadow: `0 4px 16px 0 rgba(0,0,0,0.10)`
-            }}
-          >
-            <span className="text-4xl sm:text-5xl font-extrabold mb-2 drop-shadow-lg text-center">{transitioningCard.name}</span>
-            <span className="text-base sm:text-lg font-semibold uppercase tracking-widest px-4 py-2 rounded-full bg-white bg-opacity-40 mb-3 shadow text-fuchsia-700 border border-fuchsia-200">
-              {transitioningCard.gender}
-            </span>
-            {/* Display tags for transitioning card */}
-            {(() => {
-              const categories = transitioningCard.categories || (transitioningCard.name ? getCategoriesForName(transitioningCard.name) : []);
-              if (categories.length > 0) {
-                return (
-                  <div className="flex flex-wrap justify-center gap-1 max-w-[280px]">
-                    {categories.slice(0, 6).map((categoryId: string) => {
-                      // Try new tag system first, fall back to old category system
-                      const tag = getTagById(categoryId, availableTags);
-                      const category = tag || getCategoryById(categoryId);
-                      return category ? (
-                        <span 
-                          key={categoryId}
-                          className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-40 text-fuchsia-700 border border-fuchsia-200 font-medium"
-                        >
-                          {category.name}
-                        </span>
-                      ) : null;
-                    })}
-                    {categories.length > 6 && (
-                      <span className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-40 text-fuchsia-700 border border-fuchsia-200 font-medium">
-                        +{categories.length - 6}
-                      </span>
-                    )}
-                  </div>
-                );
-              }
-              return null;
-            })()}
-          </motion.div>
-        )}
-        {/* Fixed stack of 5 cards - no AnimatePresence needed */}
-        {stack.map((card: any, i: number) => {
-          // Skip cards that are currently transitioning
-          if (transitioningCard && card.id === transitioningCard.id) {
-            return null;
-          }
-          
-          let topPx = 0;
-          if (i === 1) topPx = 4;
-          else if (i === 2) topPx = 8;
-          else if (i === 3) topPx = 12;
-          else if (i === 4) topPx = 16;
-          const zIndex = STACK_SIZE - i;
-          
-          // For placeholder cards, use a different style
-          if (card.isPlaceholder) {
-            return (
-              <motion.div
-                key={card.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 0.3, scale: 1 }}
-                transition={{ duration: 0.4, ease: 'easeOut' }}
-                className="cardstack-card bg-gradient-to-br from-gray-100 via-gray-150 to-gray-200 text-gray-400 rounded-3xl shadow-lg px-4 py-5 w-full min-h-[90px] flex flex-col items-center justify-center border-4 border-gray-200 select-none absolute left-0 right-0 mx-auto pointer-events-none"
-                style={{
-                  top: topPx,
-                  zIndex,
-                  boxShadow: `0 ${2 + i}px ${8 - i}px 0 rgba(0,0,0,0.05)`,
-                }}
-              >
-                <span className="text-3xl font-bold text-gray-300">•••</span>
-              </motion.div>
-            );
-          }
-          
-          return (
+          {/* Transitioning card for animations */}
+          {transitioningCard && animationState.type && (
             <motion.div
-              key={card.id}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, ease: 'easeOut' }}
-              className={`cardstack-card bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200 text-fuchsia-900 rounded-3xl shadow-2xl px-4 py-4 w-full min-h-[90px] flex flex-col items-center justify-start border-4 border-white select-none absolute left-0 right-0 mx-auto pointer-events-none${i === 0 ? ' pointer-events-auto' : ''}`}
+              key={transitioningCard.id + '-transitioning'}
+              initial={{ y: 0, scale: 1, opacity: 1, x: 0 }}
+              animate={animationVariants[animationState.type]}
+              onAnimationComplete={handleAnimationComplete}
+              className={`cardstack-card bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200 text-fuchsia-900 rounded-3xl shadow-2xl px-4 py-4 w-full min-h-[90px] flex flex-col items-center justify-start border-4 border-white select-none absolute left-0 right-0 mx-auto pointer-events-none`}
               style={{
-                top: topPx,
-                zIndex,
-                boxShadow: `0 ${4 + i * 2}px ${16 - i * 2}px 0 rgba(0,0,0,0.10)`,
+                top: 0,
+                zIndex: 99,
+                boxShadow: `0 4px 16px 0 rgba(0,0,0,0.10)`
               }}
-              whileTap={i === 0 ? { scale: 0.98 } : undefined}
             >
-              <span className="text-4xl sm:text-5xl font-extrabold mb-2 drop-shadow-lg text-center">{card.name}</span>
+              <span className="text-4xl sm:text-5xl font-extrabold mb-2 drop-shadow-lg text-center">{transitioningCard.name}</span>
               <span className="text-base sm:text-lg font-semibold uppercase tracking-widest px-4 py-2 rounded-full bg-white bg-opacity-40 mb-3 shadow text-fuchsia-700 border border-fuchsia-200">
-                {card.gender}
+                {transitioningCard.gender}
               </span>
-              {/* Display tags */}
+              {/* Display tags for transitioning card */}
               {(() => {
-                const categories = card.categories || (card.name ? getCategoriesForName(card.name) : []);
+                const categories = transitioningCard.categories || (transitioningCard.name ? getCategoriesForName(transitioningCard.name) : []);
                 if (categories.length > 0) {
                   return (
                     <div className="flex flex-wrap justify-center gap-1 max-w-[280px]">
@@ -590,7 +545,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
                         const tag = getTagById(categoryId, availableTags);
                         const category = tag || getCategoryById(categoryId);
                         return category ? (
-                          <span 
+                          <span
                             key={categoryId}
                             className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-40 text-fuchsia-700 border border-fuchsia-200 font-medium"
                           >
@@ -608,23 +563,106 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
                 }
                 return null;
               })()}
-              {isDev && (
-                <span
-                  className="pointer-events-none select-none absolute left-1/2 bottom-2 -translate-x-1/2 text-xl font-extrabold text-gray-400 opacity-50 z-10 whitespace-nowrap"
-                  style={{letterSpacing: '0.15em'}}
-                >
-                  DEVELOPMENT
-                </span>
-              )}
             </motion.div>
-          );
-        })}
+          )}
+          {/* Fixed stack of 5 cards - no AnimatePresence needed */}
+          {stack.map((card: any, i: number) => {
+            // Skip cards that are currently transitioning
+            if (transitioningCard && card.id === transitioningCard.id) {
+              return null;
+            }
+
+            let topPx = 0;
+            if (i === 1) topPx = 4;
+            else if (i === 2) topPx = 8;
+            else if (i === 3) topPx = 12;
+            else if (i === 4) topPx = 16;
+            const zIndex = STACK_SIZE - i;
+
+            // For placeholder cards, use a different style
+            if (card.isPlaceholder) {
+              return (
+                <motion.div
+                  key={card.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 0.3, scale: 1 }}
+                  transition={{ duration: 0.4, ease: 'easeOut' }}
+                  className="cardstack-card bg-gradient-to-br from-gray-100 via-gray-150 to-gray-200 text-gray-400 rounded-3xl shadow-lg px-4 py-5 w-full min-h-[90px] flex flex-col items-center justify-center border-4 border-gray-200 select-none absolute left-0 right-0 mx-auto pointer-events-none"
+                  style={{
+                    top: topPx,
+                    zIndex,
+                    boxShadow: `0 ${2 + i}px ${8 - i}px 0 rgba(0,0,0,0.05)`,
+                  }}
+                >
+                  <span className="text-3xl font-bold text-gray-300">•••</span>
+                </motion.div>
+              );
+            }
+
+            return (
+              <motion.div
+                key={card.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                className={`cardstack-card bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200 text-fuchsia-900 rounded-3xl shadow-2xl px-4 py-4 w-full min-h-[90px] flex flex-col items-center justify-start border-4 border-white select-none absolute left-0 right-0 mx-auto pointer-events-none${i === 0 ? ' pointer-events-auto' : ''}`}
+                style={{
+                  top: topPx,
+                  zIndex,
+                  boxShadow: `0 ${4 + i * 2}px ${16 - i * 2}px 0 rgba(0,0,0,0.10)`,
+                }}
+                whileTap={i === 0 ? { scale: 0.98 } : undefined}
+              >
+                <span className="text-4xl sm:text-5xl font-extrabold mb-2 drop-shadow-lg text-center">{card.name}</span>
+                <span className="text-base sm:text-lg font-semibold uppercase tracking-widest px-4 py-2 rounded-full bg-white bg-opacity-40 mb-3 shadow text-fuchsia-700 border border-fuchsia-200">
+                  {card.gender}
+                </span>
+                {/* Display tags */}
+                {(() => {
+                  const categories = card.categories || (card.name ? getCategoriesForName(card.name) : []);
+                  if (categories.length > 0) {
+                    return (
+                      <div className="flex flex-wrap justify-center gap-1 max-w-[280px]">
+                        {categories.slice(0, 6).map((categoryId: string) => {
+                          // Try new tag system first, fall back to old category system
+                          const tag = getTagById(categoryId, availableTags);
+                          const category = tag || getCategoryById(categoryId);
+                          return category ? (
+                            <span
+                              key={categoryId}
+                              className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-40 text-fuchsia-700 border border-fuchsia-200 font-medium"
+                            >
+                              {category.name}
+                            </span>
+                          ) : null;
+                        })}
+                        {categories.length > 6 && (
+                          <span className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-40 text-fuchsia-700 border border-fuchsia-200 font-medium">
+                            +{categories.length - 6}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+                {isDev && (
+                  <span
+                    className="pointer-events-none select-none absolute left-1/2 bottom-2 -translate-x-1/2 text-xl font-extrabold text-gray-400 opacity-50 z-10 whitespace-nowrap"
+                    style={{ letterSpacing: '0.15em' }}
+                  >
+                    DEVELOPMENT
+                  </span>
+                )}
+              </motion.div>
+            );
+          })}
         </div>
       </div>
       {/* Remaining Names Count */}
-      <div className="flex justify-center mb-4">
+      <div className="flex justify-center remaining-names-count">
         <p className="text-center text-fuchsia-700 font-semibold text-sm">
-          {deckData.length} name{deckData.length !== 1 ? 's' : ''} remaining
+          {deckData.length} {genderFilter === 'all' ? '' : genderFilter + ' '}name{deckData.length !== 1 ? 's' : ''} remaining
         </p>
       </div>
       {/* Modal for all names */}
@@ -643,9 +681,9 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
               <li key={n.id} className="py-2 px-2 flex items-center justify-between">
                 <span className="font-semibold text-lg">{n.name}</span>
                 <span className={
-                  n.gender === 'boy' ? 'text-sky-600' : 
-                  n.gender === 'girl' ? 'text-fuchsia-600' : 
-                  'text-purple-600'
+                  n.gender === 'boy' ? 'text-sky-600' :
+                    n.gender === 'girl' ? 'text-fuchsia-600' :
+                      'text-purple-600'
                 }>{n.gender}</span>
               </li>
             ))}
@@ -681,7 +719,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
         </div>
       </Modal>
       {/* Undo Button - Show if there's a recent action - Reserve space to prevent layout shifts */}
-      <div className="flex flex-col items-center mb-4" style={{ minHeight: '72px' }}>
+      <div className="flex flex-col items-center" style={{ minHeight: '72px' }}>
         {lastAction && undoCountdown > 0 && (
           <>
             <button

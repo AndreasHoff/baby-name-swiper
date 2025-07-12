@@ -5,6 +5,7 @@ A playful, mobile-friendly app for swiping through baby names and sorting them i
 
 ## 🧠 Core Features
 - **Swipable name cards** (boy/girl/unisex) in the center of the screen. Swipe functionality is implemented using Framer Motion for smooth drag gestures and touch support on mobile.
+- **Gender filtering** - Toggle between All, Boys, Girls, or Unisex names without leaving the main view.
 - Three colorful buttons below each card:
   - Left: ❌ "No"
   - Middle: ⭐ "Favorite"
