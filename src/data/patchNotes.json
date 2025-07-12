@@ -1,5 +1,43 @@
 [
     {
+        "version": "1.5.2",
+        "date": "2025-07-12",
+        "title": "UI Improvements",
+        "changes": [
+            {
+                "type": "modified",
+                "description": "Reduced swipe button sizes by 20% for better mobile experience"
+            },
+            {
+                "type": "modified",
+                "description": "Adjusted button text sizes proportionally (No/Yes buttons: text-2xl, Favorite: text-3xl)"
+            }
+        ]
+    },
+    {
+        "version": "1.5.1",
+        "date": "2025-07-12",
+        "title": "Gender Filtering",
+        "changes": [
+            {
+                "type": "added",
+                "description": "Gender filter toggle in main CardStack view (All/Boys/Girls/Unisex)"
+            },
+            {
+                "type": "added",
+                "description": "Filter buttons with emojis and responsive design for mobile"
+            },
+            {
+                "type": "modified",
+                "description": "Remaining names counter now shows filtered count and type"
+            },
+            {
+                "type": "modified",
+                "description": "Deck rebuilds automatically when gender filter changes"
+            }
+        ]
+    },
+    {
         "version": "1.5.0",
         "date": "2025-07-08",
         "title": "Environment Detection & Firebase Configuration",
