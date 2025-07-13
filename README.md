@@ -1,7 +1,18 @@
 # Baby Name Swiper App 👶❤️
 
-## ✨ Description
-A playful, mobile-friendly app for swiping through baby names and sorting them into categories: "Yes", "No", and "Favorite". Built for expecting parents to have fun picking names together.
+## ✨ Desc### 📌 Feature Ideas & Feedback for the Name App - Version 2 (Mille feedback)
+
+- [x] ~~Implement support for **unisex names**~~ ✅ COMPLETED
+- [x] Add an **undo function** (in case a swipe or choice was made by mistake) ✅ COMPLETED  
+- [x] ~~Improve the **swipe experience** (smoother and more intuitive)~~ ✅ COMPLETED
+- [ ] When adding a name and selecting a specific gender, the selected gender should **persist** — it should **not revert to the default**, so the user doesn't need to switch back manually each time
+- [ ] Allow users to **link to an article/database/website** — the app should intelligently detect and extract names from the link and suggest them individually
+- [ ] Enable **data collection** so the developer can view statistics on the **types of names users add**
+- [ ] Possibly introduce **categories** for names, such as:
+  - Traditional Danish names
+  - Nordic names
+  - Modern names
+  - Names usable in both Danish and Englishayful, mobile-friendly app for swiping through baby names and sorting them into categories: "Yes", "No", and "Favorite". Built for expecting parents to have fun picking names together.
 
 ## 🧠 Core Features
 - **Swipable name cards** (boy/girl/unisex) in the center of the screen. Swipe functionality is implemented using Framer Motion for smooth drag gestures and touch support on mobile.
@@ -81,8 +92,9 @@ While building this app, inspiration was drawn from a review of a competing app 
 This app was designed around real-world feedback and our personal journey as future parents. The core improvements over competing apps include:
 
 ### 🔄 Swiping Logic
-- Reintroducing swipe gestures in a future update (after refining animation logic).
-- Swiping left = "No", right = "Yes", up = "Favorite".
+- **Horizontal drag gestures**: Swipe left for "No", swipe right for "Yes"
+- **Button voting**: Use the star button for "Favorite" votes
+- Smooth animations and haptic feedback for all interactions
 
 ### 🧩 Smarter Filtering
 - Filters can be **combined** (e.g. Nordic + Boy + Starts with A).
@@ -116,7 +128,7 @@ This app was designed around real-world feedback and our personal journey as fut
 | Priority | Feature | Notes |
 |---------|---------|-------|
 | ⭐️⭐️⭐️ | Stackable filtering | Combine letter + gender + category |
-| ⭐️⭐️⭐️ | Swipe animations | Refined frame handling (for buttons + gestures) |
+| ✅ | Swipe animations | ✅ COMPLETED: Horizontal drag gestures with visual feedback |
 | ⭐️⭐️ | Name details | Short, helpful fields (origin, meaning) |
 | ⭐️⭐️ | Name categories | Enable toggle between curated types |
 | ⭐️ | User-submitted lists | Paste external list → auto-parse suggested names |
@@ -128,4 +140,4 @@ This app was designed around real-world feedback and our personal journey as fut
 > This project is continuously evolving based on feedback, inspiration from similar platforms, and real-world testing. Our goal is to provide couples with a clean, personal, and joyful experience as they find the perfect name together.
 ---
 
-> **Note:** The app is fully responsive and optimized for mobile (max-width 430px). Swiping works with both touch and mouse. The swipe gesture is a true drag-to-vote experience: drag left for "No", right for "Yes".
+> **Note:** The app is fully responsive and optimized for mobile (max-width 430px). Swiping works with both touch and mouse. Horizontal drag gestures work for "Yes" (right) and "No" (left), while "Favorite" is accessible via the star button.

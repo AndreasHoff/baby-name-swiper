@@ -1,5 +1,51 @@
 [
     {
+        "version": "1.6.1",
+        "date": "2025-07-13",
+        "title": "Animation Polish",
+        "changes": [
+            {
+                "type": "improved",
+                "description": "Reduced card tilt angle during drag for more subtle and refined animation"
+            }
+        ]
+    },
+    {
+        "version": "1.6.0",
+        "date": "2025-07-13",
+        "title": "Swipe Gesture Implementation",
+        "changes": [
+            {
+                "type": "added",
+                "description": "Horizontal drag gestures for voting - swipe left for No, right for Yes"
+            },
+            {
+                "type": "added",
+                "description": "Visual feedback during dragging with dynamic card background colors"
+            },
+            {
+                "type": "added",
+                "description": "Smooth card rotation and elastic drag constraints for natural feel"
+            },
+            {
+                "type": "improved",
+                "description": "Swipe animations now continue from drag position instead of restarting from center"
+            },
+            {
+                "type": "improved",
+                "description": "Limited drag distance to prevent cards from going too far off-screen"
+            },
+            {
+                "type": "modified",
+                "description": "Improved animation variants with multi-stage transitions for smoother exits"
+            },
+            {
+                "type": "modified",
+                "description": "Restricted drag to horizontal only - Favorite votes remain button-only"
+            }
+        ]
+    },
+    {
         "version": "1.5.2",
         "date": "2025-07-12",
         "title": "UI Improvements",

@@ -1,5 +1,5 @@
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { motion } from 'framer-motion';
+import { motion, type PanInfo } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import Modal from 'react-modal';
 import { db } from '../firebase';
@@ -11,6 +11,13 @@ import { SwipeButtons } from './SwipeButtons';
 interface AnimationState {
   type: 'no' | 'yes' | 'favorite' | null;
   cardId: string | null;
+}
+
+// Drag state interface
+interface DragState {
+  isDragging: boolean;
+  dragX: number;
+  dragY: number;
 }
 
 // Debug interface
@@ -26,6 +33,9 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
   const [deckData, setDeckData] = useState<any[]>([]);
   const [transitioningCard, setTransitioningCard] = useState<any | null>(null);
   const [animationState, setAnimationState] = useState<AnimationState>({ type: null, cardId: null });
+
+  // Drag state for swipe functionality
+  const [dragState, setDragState] = useState<DragState>({ isDragging: false, dragX: 0, dragY: 0 });
 
   // Tags state for proper tag display
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
@@ -167,7 +177,7 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
   }
 
   // Clean voting logic with proper animation handling
-  const handleVote = async (direction: 'yes' | 'no' | 'favorite') => {
+  const handleVote = async (direction: 'yes' | 'no' | 'favorite', startX?: number) => {
     const card = deckData[0];
     if (!card || animationState.type !== null) return; // Prevent double-voting during animation
 
@@ -190,8 +200,9 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
       removeFromNoOrder(currentUser, card.id);
     }
 
-    // Set transitioning card and animation state
-    setTransitioningCard(card);
+    // Reset drag state and set transitioning card and animation state
+    setDragState({ isDragging: false, dragX: 0, dragY: 0 });
+    setTransitioningCard({ ...card, dragStartX: startX || 0 }); // Include starting position
     setAnimationState({ type: direction, cardId: card.id });
 
     // Firebase update
@@ -245,6 +256,55 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
     setTimeout(() => {
       console.log('[CardStack] Deck after vote: animation complete');
     }, 10);
+  };
+
+  // Drag handlers for swipe functionality
+  const handleDragStart = () => {
+    setDragState(prev => ({ ...prev, isDragging: true }));
+  };
+
+  const handleDrag = (_event: any, info: PanInfo) => {
+    setDragState(prev => ({
+      ...prev,
+      dragX: info.offset.x,
+      dragY: 0 // Always 0 since we're only allowing horizontal drag
+    }));
+  };
+
+  const handleDragEnd = (_event: any, info: PanInfo) => {
+    const { offset, velocity } = info;
+    const swipeThreshold = 100; // Minimum distance to trigger swipe
+    const velocityThreshold = 500; // Minimum velocity to trigger swipe
+
+    // Don't process swipe if no card or already animating
+    const topCard = deckData[0];
+    if (!topCard || animationState.type !== null) {
+      // Reset drag state
+      setDragState({ isDragging: false, dragX: 0, dragY: 0 });
+      return;
+    }
+
+    // Only check horizontal swipes since we're restricting to horizontal drag
+    const absX = Math.abs(offset.x);
+    const absVelX = Math.abs(velocity.x);
+
+    // Check for horizontal swipes
+    if (absX > swipeThreshold || absVelX > velocityThreshold) {
+      if (offset.x > 0) {
+        console.log('[CardStack] Right swipe detected - Yes');
+        // Keep the drag state to start animation from current position
+        handleVote('yes', info.offset.x);
+      } else {
+        console.log('[CardStack] Left swipe detected - No');
+        // Keep the drag state to start animation from current position
+        handleVote('no', info.offset.x);
+      }
+      return;
+    }
+
+    console.log('[CardStack] Swipe not strong enough, card will return to center');
+    // Reset drag state if no swipe triggered
+    setDragState({ isDragging: false, dragX: 0, dragY: 0 });
   };
 
   // Undo function - updated for new state structure
@@ -328,21 +388,24 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
   }));
   const stack = [...realCards, ...placeholderCards];
 
-  // Simple animation variants - only for button clicks
-  const animationVariants = {
+  // Create dynamic animation variants based on starting position
+  const createAnimationVariants = (startX: number = 0) => ({
     yes: {
-      x: 300,
-      opacity: 0,
-      transition: { duration: 0.8, ease: 'easeInOut' }  // Increased from 0.5 to 0.8
+      x: startX !== 0 ? [startX, startX + 100, 400] : [0, 60, 120, 300],
+      opacity: startX !== 0 ? [1, 0.8, 0] : [1, 1, 0.8, 0],
+      rotate: startX !== 0 ? [startX * 0.1, (startX + 50) * 0.15, 20] : [0, 5, 10, 15],
+      transition: { duration: startX !== 0 ? 0.5 : 0.7, ease: 'easeInOut' }
     },
     no: {
-      x: -300,
-      opacity: 0,
-      transition: { duration: 0.8, ease: 'easeInOut' }  // Increased from 0.5 to 0.8
+      x: startX !== 0 ? [startX, startX - 100, -400] : [0, -60, -120, -300],
+      opacity: startX !== 0 ? [1, 0.8, 0] : [1, 1, 0.8, 0],
+      rotate: startX !== 0 ? [startX * 0.1, (startX - 50) * 0.15, -20] : [0, -5, -10, -15],
+      transition: { duration: startX !== 0 ? 0.5 : 0.7, ease: 'easeInOut' }
     },
     favorite: {
       y: [0, -30, -80],
       scale: [1, 1.12, 1],
+      opacity: [1, 1, 0],
       boxShadow: '0 0 0 8px rgba(253,224,71,0.25), 0 8px 60px 0 rgba(253,224,71,0.55)',
       filter: [
         'brightness(1) drop-shadow(0 0 16px #fde047)',
@@ -352,7 +415,10 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
       transition: { duration: 1.2, ease: [0.4, 0, 0.2, 1] }
     },
     none: {},
-  };
+  });
+
+  // Get the current animation variants (use startX from transitioning card if available)
+  const animationVariants = createAnimationVariants(transitioningCard?.dragStartX || 0);
 
   // If there are no cards left, show a custom message
   if (deckData.length === 0 && !transitioningCard) {
@@ -494,16 +560,16 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
       <div className="flex justify-center px-4 mt-4 mb-4">
         <div className="flex bg-white bg-opacity-60 rounded-full p-1 shadow-lg border border-white border-opacity-40">
           {[
-            { value: 'all', label: 'All', emoji: '👶'},
-            { value: 'boy', label: 'Boys', emoji: '👦'},
-            { value: 'girl', label: 'Girls', emoji: '👧'},
+            { value: 'all', label: 'All', emoji: '👶' },
+            { value: 'boy', label: 'Boys', emoji: '👦' },
+            { value: 'girl', label: 'Girls', emoji: '👧' },
           ].map((option) => (
             <button
               key={option.value}
               onClick={() => setGenderFilter(option.value as typeof genderFilter)}
               className={`px-3 py-2 rounded-full text-sm font-semibold transition-all duration-200 flex items-center gap-1 ${genderFilter === option.value
-                  ? 'bg-gradient-to-br from-fuchsia-400 to-sky-400 text-white shadow-md'
-                  : 'text-fuchsia-700 hover:bg-white hover:bg-opacity-40'
+                ? 'bg-gradient-to-br from-fuchsia-400 to-sky-400 text-white shadow-md'
+                : 'text-fuchsia-700 hover:bg-white hover:bg-opacity-40'
                 }`}
             >
               <span className="hidden sm:inline">{option.label}</span>
@@ -603,15 +669,34 @@ export function CardStack({ allNames, userVotes, currentUser, refreshUserVotes }
               <motion.div
                 key={card.id}
                 initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
+                animate={{
+                  opacity: 1,
+                  scale: 1,
+                  x: i === 0 && dragState.isDragging ? dragState.dragX : 0,
+                  rotate: i === 0 && dragState.isDragging ? dragState.dragX * 0.05 : 0
+                }}
                 transition={{ duration: 0.4, ease: 'easeOut' }}
-                className={`cardstack-card bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200 text-fuchsia-900 rounded-3xl shadow-2xl px-4 py-4 w-full min-h-[90px] flex flex-col items-center justify-start border-4 border-white select-none absolute left-0 right-0 mx-auto pointer-events-none${i === 0 ? ' pointer-events-auto' : ''}`}
+                className={`cardstack-card ${i === 0 && dragState.isDragging
+                  ? dragState.dragX > 50
+                    ? 'bg-gradient-to-br from-green-300 via-emerald-300 to-green-400' // Green for yes
+                    : dragState.dragX < -50
+                      ? 'bg-gradient-to-br from-red-300 via-pink-300 to-red-400' // Red for no
+                      : 'bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200' // Default
+                  : 'bg-gradient-to-br from-sky-200 via-fuchsia-200 to-amber-200' // Default
+                  } text-fuchsia-900 rounded-3xl shadow-2xl px-4 py-4 w-full min-h-[90px] flex flex-col items-center justify-start border-4 border-white select-none absolute left-0 right-0 mx-auto pointer-events-none${i === 0 ? ' pointer-events-auto' : ''}`}
                 style={{
                   top: topPx,
                   zIndex,
-                  boxShadow: `0 ${4 + i * 2}px ${16 - i * 2}px 0 rgba(0,0,0,0.10)`,
+                  boxShadow: `0 ${4 + i * 2}px ${16 - i * 2}px 0 rgba(0,0,0,0.10)`
                 }}
                 whileTap={i === 0 ? { scale: 0.98 } : undefined}
+                // Add drag functionality only to the top card - horizontal only
+                drag={i === 0 && animationState.type === null ? "x" : false}
+                dragConstraints={{ left: -150, right: 150 }}
+                dragElastic={0.3}
+                onDragStart={i === 0 ? handleDragStart : undefined}
+                onDrag={i === 0 ? handleDrag : undefined}
+                onDragEnd={i === 0 ? handleDragEnd : undefined}
               >
                 <span className="text-4xl sm:text-5xl font-extrabold mb-2 drop-shadow-lg text-center">{card.name}</span>
                 <span className="text-base sm:text-lg font-semibold uppercase tracking-widest px-4 py-2 rounded-full bg-white bg-opacity-40 mb-3 shadow text-fuchsia-700 border border-fuchsia-200">
