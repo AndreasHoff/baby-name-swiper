@@ -1,5 +1,16 @@
 [
     {
+        "version": "1.6.2",
+        "date": "2025-07-14",
+        "title": "NavBar Padding Fix",
+        "changes": [
+            {
+                "type": "fixed",
+                "description": "Removed unwanted button padding in NavBar to match production styling"
+            }
+        ]
+    },
+    {
         "version": "1.6.1",
         "date": "2025-07-13",
         "title": "Animation Polish",

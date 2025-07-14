@@ -11,8 +11,8 @@ const NavBar: React.FC<NavBarProps> = ({ currentView, setView }) => {
   const underlineStyle = (isActive: boolean) =>
     isActive
       ? {
-          position: 'relative' as const,
-        }
+        position: 'relative' as const,
+      }
       : {};
 
   const handleSetView = (view: 'main' | 'lists' | 'settings') => {
@@ -26,7 +26,7 @@ const NavBar: React.FC<NavBarProps> = ({ currentView, setView }) => {
         {/* Settings - Left */}
         <button
           aria-label="Settings"
-          className={`flex-1 flex flex-col items-center justify-center space-y-1 h-14 rounded-none border-none bg-transparent hover:bg-sky-50 active:bg-sky-100 focus:outline-none focus:ring-0 transition-none${currentView === "settings" ? " text-sky-600" : " text-sky-400 hover:text-sky-600"}`}
+          className={`flex-1 flex flex-col items-center justify-center space-y-1 h-14 rounded-none border-none bg-transparent hover:bg-sky-50 active:bg-sky-100 focus:outline-none focus:ring-0 transition-none p-0${currentView === "settings" ? " text-sky-600" : " text-sky-400 hover:text-sky-600"}`}
           onClick={() => handleSetView("settings")}
           style={underlineStyle(currentView === "settings")}
         >
@@ -53,7 +53,7 @@ const NavBar: React.FC<NavBarProps> = ({ currentView, setView }) => {
         {/* Card Stack - Center */}
         <button
           aria-label="Swipe Cards"
-          className={`flex-1 flex flex-col items-center justify-center space-y-1 h-14 rounded-none border-none bg-transparent hover:bg-fuchsia-50 active:bg-fuchsia-100 focus:outline-none focus:ring-0 transition-none${currentView === "main" ? " text-fuchsia-600" : " text-fuchsia-400 hover:text-fuchsia-600"}`}
+          className={`flex-1 flex flex-col items-center justify-center space-y-1 h-14 rounded-none border-none bg-transparent hover:bg-fuchsia-50 active:bg-fuchsia-100 focus:outline-none focus:ring-0 transition-none p-0${currentView === "main" ? " text-fuchsia-600" : " text-fuchsia-400 hover:text-fuchsia-600"}`}
           onClick={() => handleSetView("main")}
           style={underlineStyle(currentView === "main")}
         >
@@ -80,7 +80,7 @@ const NavBar: React.FC<NavBarProps> = ({ currentView, setView }) => {
         {/* Lists - Right */}
         <button
           aria-label="Name Lists"
-          className={`flex-1 flex flex-col items-center justify-center space-y-1 h-14 rounded-none border-none bg-transparent hover:bg-amber-50 active:bg-amber-100 focus:outline-none focus:ring-0 transition-none${currentView === "lists" ? " text-amber-600" : " text-amber-400 hover:text-amber-600"}`}
+          className={`flex-1 flex flex-col items-center justify-center space-y-1 h-14 rounded-none border-none bg-transparent hover:bg-amber-50 active:bg-amber-100 focus:outline-none focus:ring-0 transition-none p-0${currentView === "lists" ? " text-amber-600" : " text-amber-400 hover:text-amber-600"}`}
           onClick={() => handleSetView("lists")}
           style={underlineStyle(currentView === "lists")}
         >
